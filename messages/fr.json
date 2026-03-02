@@ -172,11 +172,17 @@
         "city": "Ville",
         "state": "Région",
         "zipCode": "Code Postal",
+        "postalCode": "Code Postal",
         "country": "Pays",
         "paymentMethod": "Méthode de Paiement",
         "orderSummary": "Résumé de la Commande",
         "placeOrder": "Passer la Commande",
-        "processing": "Traitement en cours..."
+        "processing": "Traitement en cours...",
+        "subtotal": "Sous-total",
+        "shipping": "Livraison",
+        "shippingFree": "Gratuite",
+        "tax": "TVA",
+        "total": "Total"
     },
     "account": {
         "title": "Mon Compte",

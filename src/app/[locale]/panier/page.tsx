@@ -50,7 +50,11 @@ export default function CartPage() {
                                     <Link href={{ pathname: '/produit/[slug]', params: { slug: item.product.slug } }} className="font-serif font-normal text-xl text-forest-dark hover:text-gold transition-colors line-clamp-1 tracking-wide">
                                         {getLocalizedValue(item.product.name, locale)}
                                     </Link>
-                                    <p className="text-[0.75rem] uppercase tracking-widest text-[#C9A84C] mt-2 font-medium">{item.product.category}</p>
+                                    <p className="text-[0.75rem] uppercase tracking-widest text-[#C9A84C] mt-2 font-medium">
+                                        {typeof item.product.category === 'object'
+                                            ? getLocalizedValue(item.product.category as { fr: string; en: string }, locale)
+                                            : item.product.category}
+                                    </p>
                                     <div className="flex flex-col sm:flex-row items-center gap-6 mt-6 w-full justify-between sm:justify-start">
                                         <div className="flex items-center border border-cream-dark/20 rounded-xl overflow-hidden bg-white/50">
                                             <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="w-10 h-10 flex items-center justify-center hover:bg-[#FEFAE0] transition-colors text-charcoal-light">

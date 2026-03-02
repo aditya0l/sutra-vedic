@@ -1,22 +1,22 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { categories } from '@/lib/mock-data';
+import { categoriesApi } from '@/lib/api';
 import { getLocalizedValue } from '@/lib/utils';
-import { ArrowRight } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
+import { Category } from '@/types';
 
 const EASE = [0.25, 0.1, 0.25, 1] as const;
 
 const categoryEmojis: Record<string, string> = {
     'huiles-ayurvediques': '🫙',
+    'cures-bien-etre': '🎁',
+    'soins-specialises': '🌿',
     'complements-plantes': '🌿',
     'immunite': '🛡️',
     'soins-peau': '✨',
-    'soins-capillaires': '💇',
-    'sante-digestive': '💚',
 };
 
 export default function CategoriesSection() {
@@ -26,6 +26,11 @@ export default function CategoriesSection() {
     const headerRef = useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, amount: 0.08 });
     const isHeaderInView = useInView(headerRef, { once: true, amount: 0.5 });
+    const [cats, setCats] = useState<Category[]>([]);
+
+    useEffect(() => {
+        categoriesApi.list().then(setCats).catch(() => setCats([]));
+    }, []);
 
     return (
         <section ref={ref} className="section-padding bg-white">
@@ -53,7 +58,7 @@ export default function CategoriesSection() {
 
                 {/* Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16">
-                    {categories.map((category, i) => (
+                    {cats.map((category, i) => (
                         <motion.div
                             key={category.id}
                             initial={{ opacity: 0, y: 28 }}
@@ -61,7 +66,12 @@ export default function CategoriesSection() {
                             transition={{ duration: 0.8, delay: i * 0.15, ease: EASE }}
                         >
                             <Link
-                                href="/produits"
+                                href={{ pathname: '/produits' }}
+                                onClick={() => {
+                                    if (typeof window !== 'undefined') {
+                                        window.location.href = `/produits?category=${category.slug}`;
+                                    }
+                                }}
                                 className="group relative overflow-hidden rounded-[2rem] bg-[#0F2E22] p-12 min-h-[340px] flex flex-col items-center text-center justify-between block hover:shadow-[0_30px_80px_-20px_rgba(15,46,34,0.35)] transition-all duration-700"
                             >
                                 {/* BG glows */}
@@ -74,13 +84,11 @@ export default function CategoriesSection() {
                                     <span className="text-4xl mb-6 block transition-transform duration-700 group-hover:scale-110">
                                         {categoryEmojis[category.slug] || '🌱'}
                                     </span>
-                                    <h3
-                                        className="font-serif font-normal text-2xl text-[#E8D8A0] mb-4 leading-snug tracking-wide"
-                                    >
-                                        {getLocalizedValue(category.name, locale)}
+                                    <h3 className="font-serif font-normal text-2xl text-[#E8D8A0] mb-4 leading-snug tracking-wide">
+                                        {getLocalizedValue(category.name as { fr: string; en: string }, locale)}
                                     </h3>
                                     <p className="text-white/60 text-[0.875rem] leading-relaxed font-light">
-                                        {getLocalizedValue(category.description, locale)}
+                                        {getLocalizedValue(category.description as { fr: string; en: string }, locale)}
                                     </p>
                                 </div>
 

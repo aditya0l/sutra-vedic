@@ -1,13 +1,14 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/lib/cart-context';
-import { products } from '@/lib/mock-data';
+import { productsApi } from '@/lib/api';
 import { getLocalizedValue, formatPrice } from '@/lib/utils';
 import { ShoppingBag, Star, ArrowRight, Sparkles } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
+import { Product } from '@/types';
 
 const EASE = [0.25, 0.1, 0.25, 1] as const;
 
@@ -19,9 +20,13 @@ export default function FeaturedProducts() {
     const headerRef = useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, amount: 0.05 });
     const isHeaderInView = useInView(headerRef, { once: true, amount: 0.5 });
+    const [featured, setFeatured] = useState<Product[]>([]);
 
-    // With 3 products, we show all of them as featured
-    const featured = products;
+    useEffect(() => {
+        productsApi.list({ limit: 3, sort: 'rating' })
+            .then(res => setFeatured(res.data))
+            .catch(() => setFeatured([]));
+    }, []);
 
     return (
         <section ref={ref} className="section-padding bg-[#FEFAE0]">
@@ -111,13 +116,15 @@ export default function FeaturedProducts() {
                                 <div className="space-y-4 px-1 text-center pt-2">
                                     <div className="flex flex-col items-center gap-2">
                                         <p className="text-[0.65rem] font-medium uppercase tracking-[0.2em] text-[#C9A84C]">
-                                            {product.category}
+                                            {typeof product.category === 'object'
+                                                ? getLocalizedValue(product.category as { fr: string; en: string }, locale)
+                                                : product.category}
                                         </p>
                                         <div className="flex items-center justify-center gap-1">
                                             {Array.from({ length: 5 }).map((_, idx) => (
                                                 <Star key={idx} className={`w-3 h-3 ${idx < Math.floor(product.rating) ? 'text-[#C9A84C] fill-[#C9A84C]' : 'text-gray-200'} `} />
                                             ))}
-                                            <span className="text-[0.7rem] ml-1 font-medium text-[#0F2E22]/70">({Math.floor(product.rating * 24)}+)</span>
+                                            <span className="text-[0.7rem] ml-1 font-medium text-[#0F2E22]/70">({product.reviewCount}+)</span>
                                         </div>
                                     </div>
 

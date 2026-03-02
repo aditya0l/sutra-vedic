@@ -1,28 +1,74 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { useCart } from '@/lib/cart-context';
-import { products, reviews as allReviews } from '@/lib/mock-data';
+import { productsApi } from '@/lib/api';
 import { getLocalizedValue, formatPrice } from '@/lib/utils';
 import {
-    Star, ShoppingBag, Heart, Share2, Minus, Plus, ChevronDown,
+    Star, ShoppingBag, Heart, Minus, Plus, ChevronDown,
     ChevronRight, ShieldCheck, Truck, RotateCcw, Award, Check
 } from 'lucide-react';
+import { Product, Review } from '@/types';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params);
     const t = useTranslations('product');
-    const tc = useTranslations('common');
     const locale = useLocale();
     const { addItem } = useCart();
+    const router = useRouter();
 
-    const product = products.find(p => p.slug === slug);
+    const [product, setProduct] = useState<Product | null>(null);
+    const [reviews, setReviews] = useState<Review[]>([]);
+    const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState('description');
     const [openFaq, setOpenFaq] = useState<number | null>(null);
     const [addedToCart, setAddedToCart] = useState(false);
+
+    useEffect(() => {
+        setLoading(true);
+        productsApi.getBySlug(slug)
+            .then(async (p) => {
+                setProduct(p);
+                // Fetch reviews & related products in parallel
+                const [revs, related] = await Promise.all([
+                    productsApi.getReviews(slug).catch(() => []),
+                    p.categorySlug
+                        ? productsApi.list({ category: p.categorySlug, limit: 4 })
+                            .then(r => r.data.filter(rp => rp.id !== p.id).slice(0, 4))
+                            .catch(() => [])
+                        : Promise.resolve([]),
+                ]);
+                setReviews(revs);
+                setRelatedProducts(related);
+            })
+            .catch(() => setProduct(null))
+            .finally(() => setLoading(false));
+    }, [slug]);
+
+    const handleAddToCart = () => {
+        if (!product) return;
+        addItem(product, quantity);
+        setAddedToCart(true);
+        setTimeout(() => setAddedToCart(false), 2000);
+    };
+
+    const handleBuyNow = () => {
+        if (!product) return;
+        addItem(product, quantity);
+        router.push('/checkout');
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="w-16 h-16 border-4 border-[#0F2E22]/10 border-t-[#C9A84C] rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     if (!product) {
         return (
@@ -39,22 +85,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
         );
     }
 
-    const handleAddToCart = () => {
-        addItem(product, quantity);
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 2000);
-    };
-
-    const productReviews = allReviews.filter(r => r.productId === product.id);
-    const relatedProducts = products.filter(p => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, 4);
-
     const tabs = [
         { key: 'description', label: t('description') },
         { key: 'benefits', label: t('benefits') },
         { key: 'ingredients', label: t('ingredients') },
         { key: 'usage', label: t('usage') },
-        { key: 'reviews', label: `${t('reviews')} (${productReviews.length})` },
+        { key: 'reviews', label: `${t('reviews')} (${reviews.length})` },
     ];
+
+    const benefits = Array.isArray(product.benefits) ? product.benefits : [];
+    const ingredients = Array.isArray(product.ingredients) ? product.ingredients : [];
+    const faq = Array.isArray(product.faq) ? product.faq : [];
 
     return (
         <div className="min-h-screen bg-white">
@@ -80,13 +121,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                                     <span className="text-[10rem] opacity-60">🌿</span>
                                 </div>
                             </div>
-                            {/* Badges */}
                             <div className="absolute top-10 left-10 flex flex-col gap-2.5">
                                 {product.isBestseller && <span className="px-4 py-1.5 bg-[#C9A84C] text-[#0F2E22] text-[0.65rem] font-bold tracking-[0.2em] rounded-full uppercase">BEST-SELLER</span>}
                                 {product.isNew && <span className="px-4 py-1.5 bg-[#0F2E22] text-white text-[0.65rem] font-bold tracking-[0.2em] rounded-full uppercase">NEW</span>}
                             </div>
                         </div>
-                        {/* Thumbnails */}
                         <div className="grid grid-cols-4 gap-3">
                             {[1, 2, 3, 4].map((_, i) => (
                                 <div key={i} className={`aspect-square rounded-2xl overflow-hidden cursor-pointer border-2 transition-all ${i === 0 ? 'border-gold' : 'border-cream-dark/10 hover:border-gold/50'} bg-white flex items-center justify-center`}>
@@ -99,7 +138,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                     {/* Product Info */}
                     <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
                         <p className="text-[0.7rem] font-medium uppercase tracking-[0.2em] text-[#C9A84C] mb-6">
-                            {product.category}
+                            {typeof product.category === 'object'
+                                ? getLocalizedValue(product.category as { fr: string; en: string }, locale)
+                                : product.category}
                         </p>
                         <h1 className="text-4xl md:text-5xl font-serif font-normal text-[#0F2E22] leading-tight mb-8 tracking-wide">
                             {getLocalizedValue(product.name, locale)}
@@ -141,19 +182,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         {/* Quantity & Add to Cart */}
                         <div className="flex flex-col sm:flex-row gap-4 mb-6">
                             <div className="flex items-center border border-cream-dark/20 rounded-xl overflow-hidden bg-white">
-                                <button
-                                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                                    className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors"
-                                >
+                                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors">
                                     <Minus className="w-4 h-4" />
                                 </button>
-                                <span className="w-12 h-12 flex items-center justify-center font-semibold text-lg border-x border-cream-dark/20">
-                                    {quantity}
-                                </span>
-                                <button
-                                    onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
-                                    className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors"
-                                >
+                                <span className="w-12 h-12 flex items-center justify-center font-semibold text-lg border-x border-cream-dark/20">{quantity}</span>
+                                <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors">
                                     <Plus className="w-4 h-4" />
                                 </button>
                             </div>
@@ -166,31 +199,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                                     : 'bg-forest hover:bg-forest-light text-white hover:shadow-xl'
                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                {addedToCart ? (
-                                    <>
-                                        <Check className="w-5 h-5 shrink-0" />
-                                        <span>{locale === 'fr' ? 'Ajouté !' : 'Added!'}</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <ShoppingBag className="w-5 h-5 shrink-0" />
-                                        <span>{t('addToCart')}</span>
-                                    </>
-                                )}
+                                {addedToCart ? (<><Check className="w-5 h-5 shrink-0" /><span>{locale === 'fr' ? 'Ajouté !' : 'Added!'}</span></>) : (<><ShoppingBag className="w-5 h-5 shrink-0" /><span>{t('addToCart')}</span></>)}
                             </button>
-
                             <button className="w-12 h-12 flex items-center justify-center rounded-xl border border-cream-dark/20 hover:bg-cream hover:border-gold transition-colors bg-white">
                                 <Heart className="w-5 h-5 text-charcoal-light" />
                             </button>
                         </div>
 
                         {/* Buy Now */}
-                        <Link
-                            href="/checkout"
-                            className="px-[2.5rem] sm:px-[3.5rem] py-5 bg-gold hover:bg-gold-light text-forest-dark font-bold rounded-xl transition-all duration-300 inline-flex items-center justify-center text-center gap-2 text-[0.95rem] tracking-wide mb-8 hover:shadow-xl w-[calc(100%-2rem)] sm:w-auto mx-auto lg:mx-0"
+                        <button
+                            onClick={handleBuyNow}
+                            disabled={product.stock <= 0}
+                            className="px-[2.5rem] sm:px-[3.5rem] py-5 bg-gold hover:bg-gold-light text-forest-dark font-bold rounded-xl transition-all duration-300 inline-flex items-center justify-center text-center gap-2 text-[0.95rem] tracking-wide mb-8 hover:shadow-xl w-[calc(100%-2rem)] sm:w-auto mx-auto lg:mx-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span>{t('buyNow')}</span>
-                        </Link>
+                        </button>
 
                         {/* Trust Badges */}
                         <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-2xl border border-cream-dark/10">
@@ -215,7 +238,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                             ))}
                         </div>
 
-                        {/* SKU */}
                         <p className="text-xs text-charcoal-light mt-6">{t('sku')}: {product.sku}</p>
                     </div>
                 </div>
@@ -227,10 +249,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`text-[0.85rem] font-medium tracking-widest uppercase whitespace-nowrap transition-all pb-4 border-b-2 -mb-[18px] ${activeTab === tab.key
-                                    ? 'text-[#C9A84C] border-[#C9A84C]'
-                                    : 'text-charcoal-light border-transparent hover:text-forest'
-                                    }`}
+                                className={`text-[0.85rem] font-medium tracking-widest uppercase whitespace-nowrap transition-all pb-4 border-b-2 -mb-[18px] ${activeTab === tab.key ? 'text-[#C9A84C] border-[#C9A84C]' : 'text-charcoal-light border-transparent hover:text-forest'}`}
                             >
                                 {tab.label}
                             </button>
@@ -238,90 +257,61 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                     </div>
 
                     <div className="bg-white rounded-3xl p-8 md:p-12 min-h-[300px] max-w-4xl mx-auto">
-                        {/* Description Tab */}
                         {activeTab === 'description' && (
                             <div className="prose prose-lg max-w-none">
-                                <p className="text-charcoal-light leading-relaxed text-base">
-                                    {getLocalizedValue(product.description, locale)}
-                                </p>
+                                <p className="text-charcoal-light leading-relaxed text-base">{getLocalizedValue(product.description, locale)}</p>
                             </div>
                         )}
 
-                        {/* Benefits Tab */}
                         {activeTab === 'benefits' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {product.benefits.map((benefit, i) => (
+                                {benefits.map((benefit: { icon: string; title: { fr: string; en: string }; description: { fr: string; en: string } }, i: number) => (
                                     <div key={i} className="flex gap-4 p-5 bg-cream/50 rounded-2xl hover:bg-cream transition-colors">
-                                        <div className="w-12 h-12 rounded-xl bg-forest/10 flex items-center justify-center shrink-0 text-2xl">
-                                            {benefit.icon}
-                                        </div>
+                                        <div className="w-12 h-12 rounded-xl bg-forest/10 flex items-center justify-center shrink-0 text-2xl">{benefit.icon}</div>
                                         <div>
-                                            <h4 className="font-serif font-semibold text-forest-dark mb-1">
-                                                {getLocalizedValue(benefit.title, locale)}
-                                            </h4>
-                                            <p className="text-sm text-charcoal-light">
-                                                {getLocalizedValue(benefit.description, locale)}
-                                            </p>
+                                            <h4 className="font-serif font-semibold text-forest-dark mb-1">{getLocalizedValue(benefit.title, locale)}</h4>
+                                            <p className="text-sm text-charcoal-light">{getLocalizedValue(benefit.description, locale)}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        {/* Ingredients Tab — Zobrius style */}
                         {activeTab === 'ingredients' && (
                             <div className="space-y-8">
-                                <p className="text-charcoal-light mb-6">
-                                    {locale === 'fr'
-                                        ? 'Chaque ingrédient est soigneusement sélectionné pour sa pureté et son efficacité.'
-                                        : 'Each ingredient is carefully selected for its purity and effectiveness.'}
-                                </p>
+                                <p className="text-charcoal-light mb-6">{locale === 'fr' ? 'Chaque ingrédient est soigneusement sélectionné pour sa pureté et son efficacité.' : 'Each ingredient is carefully selected for its purity and effectiveness.'}</p>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {product.ingredients.map((ing, i) => (
+                                    {ingredients.map((ing: { name: { fr: string; en: string }; description: { fr: string; en: string } }, i: number) => (
                                         <div key={i} className="text-center p-6 bg-gradient-to-br from-cream to-sage/10 rounded-2xl">
-                                            <div className="w-20 h-20 rounded-full bg-white shadow-sm mx-auto mb-4 flex items-center justify-center">
-                                                <span className="text-3xl">🌱</span>
-                                            </div>
-                                            <h4 className="font-serif font-semibold text-forest-dark mb-2">
-                                                {getLocalizedValue(ing.name, locale)}
-                                            </h4>
-                                            <p className="text-sm text-charcoal-light">
-                                                {getLocalizedValue(ing.description, locale)}
-                                            </p>
+                                            <div className="w-20 h-20 rounded-full bg-white shadow-sm mx-auto mb-4 flex items-center justify-center"><span className="text-3xl">🌱</span></div>
+                                            <h4 className="font-serif font-semibold text-forest-dark mb-2">{getLocalizedValue(ing.name, locale)}</h4>
+                                            <p className="text-sm text-charcoal-light">{getLocalizedValue(ing.description, locale)}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* Usage Tab */}
                         {activeTab === 'usage' && (
                             <div className="max-w-2xl">
                                 <div className="p-6 bg-cream/50 rounded-2xl border-l-4 border-gold">
-                                    <h4 className="font-serif font-semibold text-forest-dark mb-3 flex items-center gap-2">
-                                        📋 {t('usage')}
-                                    </h4>
-                                    <p className="text-charcoal-light leading-relaxed">
-                                        {getLocalizedValue(product.usage, locale)}
-                                    </p>
+                                    <h4 className="font-serif font-semibold text-forest-dark mb-3 flex items-center gap-2">📋 {t('usage')}</h4>
+                                    <p className="text-charcoal-light leading-relaxed">{getLocalizedValue(product.usage, locale)}</p>
                                 </div>
                             </div>
                         )}
 
-                        {/* Reviews Tab */}
                         {activeTab === 'reviews' && (
                             <div>
-                                {productReviews.length === 0 ? (
-                                    <p className="text-center text-charcoal-light py-8">
-                                        {locale === 'fr' ? 'Aucun avis pour le moment.' : 'No reviews yet.'}
-                                    </p>
+                                {reviews.length === 0 ? (
+                                    <p className="text-center text-charcoal-light py-8">{locale === 'fr' ? 'Aucun avis pour le moment.' : 'No reviews yet.'}</p>
                                 ) : (
                                     <div className="space-y-6">
-                                        {productReviews.map(review => (
+                                        {reviews.map(review => (
                                             <div key={review.id} className="p-6 bg-cream/30 rounded-2xl">
                                                 <div className="flex items-center gap-3 mb-3">
                                                     <div className="w-10 h-10 rounded-full bg-forest flex items-center justify-center text-white font-serif font-bold text-sm">
-                                                        {review.userName.split(' ').map(n => n[0]).join('')}
+                                                        {review.userName.split(' ').map((n: string) => n[0]).join('')}
                                                     </div>
                                                     <div>
                                                         <p className="font-semibold text-sm">{review.userName}</p>
@@ -335,7 +325,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                                                         <span className="ml-auto text-xs text-gold font-medium">✓ {locale === 'fr' ? 'Vérifié' : 'Verified'}</span>
                                                     )}
                                                 </div>
-                                                <p className="text-sm text-charcoal-light">{getLocalizedValue(review.comment, locale)}</p>
+                                                <p className="text-sm text-charcoal-light">{getLocalizedValue(review.comment as { fr: string; en: string }, locale)}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -346,12 +336,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                 </div>
 
                 {/* FAQ */}
-                {product.faq.length > 0 && (
+                {faq.length > 0 && (
                     <div className="mt-24 max-w-3xl mx-auto">
                         <h2 className="text-3xl md:text-4xl font-serif font-normal text-forest-dark mb-12 text-center tracking-wide">{t('faq')}</h2>
                         <div className="space-y-4">
-                            {product.faq.map((item, i) => (
-                                <div key={i} className="bg-cream/20 rounded-2xl overflow-hidden transition-all duration-300">
+                            {faq.map((item: { question: { fr: string; en: string }; answer: { fr: string; en: string } }, i: number) => (
+                                <div key={i} className="bg-cream/20 rounded-2xl overflow-hidden">
                                     <button
                                         onClick={() => setOpenFaq(openFaq === i ? null : i)}
                                         className="w-full flex items-center justify-between p-6 text-left font-serif font-normal text-lg tracking-wide text-forest-dark hover:bg-cream/40 transition-colors"
@@ -360,7 +350,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                                         <ChevronDown className={`w-5 h-5 text-gold transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openFaq === i && (
-                                        <div className="px-6 pb-6 text-[0.9375rem] font-light text-charcoal-light leading-relaxed animate-fade-in border-t border-cream-dark/10 pt-4 mt-2 mx-2">
+                                        <div className="px-6 pb-6 text-[0.9375rem] font-light text-charcoal-light leading-relaxed border-t border-cream-dark/10 pt-4 mt-2 mx-2">
                                             {getLocalizedValue(item.answer, locale)}
                                         </div>
                                     )}

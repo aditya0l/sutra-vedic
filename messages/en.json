@@ -172,11 +172,17 @@
         "city": "City",
         "state": "State/Region",
         "zipCode": "ZIP Code",
+        "postalCode": "Postal Code",
         "country": "Country",
         "paymentMethod": "Payment Method",
         "orderSummary": "Order Summary",
         "placeOrder": "Place Order",
-        "processing": "Processing..."
+        "processing": "Processing...",
+        "subtotal": "Subtotal",
+        "shipping": "Shipping",
+        "shippingFree": "Free",
+        "tax": "Tax",
+        "total": "Total"
     },
     "account": {
         "title": "My Account",
