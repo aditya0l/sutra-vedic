@@ -1,5 +1,8 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { db, storage } from '@/lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -28,27 +31,33 @@ export default function ProductsTab({ token }: { token: string }) {
     const [editing, setEditing] = useState<any>(null);
     const [form, setForm] = useState({
         nameFr: '', nameEn: '', shortFr: '', shortEn: '',
-        price: '', sku: '', categoryId: '', imageUrl: '',
+        price: '', compareAtPrice: '', sku: '', categoryId: '', imageUrl: '',
         stock: '', isNew: false, isBestseller: false, isActive: true,
     });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
-    const fetchAll = useCallback(() => {
+    const fetchAll = useCallback(async () => {
         setLoading(true);
-        Promise.all([
-            fetch(`${API}/admin/products`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-            fetch(`${API}/admin/categories`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        ]).then(([p, c]) => {
-            setProducts(p.data || []);
-            setCategories(c.data || []);
-        }).catch(() => { }).finally(() => setLoading(false));
+        try {
+            const [pSnap, cSnap] = await Promise.all([
+                getDocs(collection(db, 'products')),
+                getDocs(collection(db, 'categories'))
+            ]);
+
+            setProducts(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setCategories(cSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch (err) {
+            console.error("Error fetching admin data:", err);
+        } finally {
+            setLoading(false);
+        }
     }, [token]);
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
     function blankForm() {
-        return { nameFr: '', nameEn: '', shortFr: '', shortEn: '', price: '', sku: '', categoryId: categories[0]?.id || '', imageUrl: '', stock: '', isNew: false, isBestseller: false, isActive: true };
+        return { nameFr: '', nameEn: '', shortFr: '', shortEn: '', price: '', compareAtPrice: '', sku: '', categoryId: categories[0]?.id || '', imageUrl: '', stock: '', isNew: false, isBestseller: false, isActive: true };
     }
 
     function openCreate() { setEditing(null); setForm(blankForm()); setMsg(null); setShowForm(true); }
@@ -58,7 +67,7 @@ export default function ProductsTab({ token }: { token: string }) {
         setForm({
             nameFr: p.name?.fr || '', nameEn: p.name?.en || '',
             shortFr: p.shortDescription?.fr || '', shortEn: p.shortDescription?.en || '',
-            price: String(p.price), sku: p.sku, categoryId: p.categoryId || categories[0]?.id || '',
+            price: String(p.price), compareAtPrice: String(p.compareAtPrice || ''), sku: p.sku, categoryId: p.categoryId || categories[0]?.id || '',
             imageUrl: p.images?.[0] || '',
             stock: String(p.stock ?? 0), isNew: p.isNew, isBestseller: p.isBestseller, isActive: p.isActive,
         });
@@ -68,40 +77,47 @@ export default function ProductsTab({ token }: { token: string }) {
 
     async function handleSave() {
         setSaving(true); setMsg(null);
-        const body = {
+        const payload = {
             name: { fr: form.nameFr, en: form.nameEn },
             shortDescription: { fr: form.shortFr, en: form.shortEn },
             description: editing?.description || { fr: form.shortFr, en: form.shortEn },
             price: parseFloat(form.price),
+            compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : null,
             categoryId: form.categoryId,
             stock: parseInt(form.stock || '0'),
             images: form.imageUrl ? [form.imageUrl] : [],
-            isNew: form.isNew, isBestseller: form.isBestseller, isActive: form.isActive,
+            isNew: form.isNew,
+            isBestseller: form.isBestseller,
+            isActive: form.isActive,
             ...(!editing ? { sku: form.sku, slug: form.nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || form.sku } : {}),
+            updatedAt: new Date().toISOString(),
         };
-        const res = await fetch(
-            editing ? `${API}/admin/products/${editing.id}` : `${API}/admin/products`,
-            { method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) }
-        );
-        if (res.ok) {
+
+        try {
+            if (editing) {
+                await updateDoc(doc(db, 'products', editing.id), payload);
+            } else {
+                await addDoc(collection(db, 'products'), { ...payload, createdAt: new Date().toISOString() });
+            }
+
             setMsg({ text: 'Product saved', ok: true });
             fetchAll();
             setTimeout(() => { setShowForm(false); setMsg(null); }, 800);
-        } else {
-            const d = await res.json();
-            setMsg({ text: d.message || 'Error saving product', ok: false });
+        } catch (err: any) {
+            setMsg({ text: err.message || 'Error saving product', ok: false });
+        } finally {
+            setSaving(false);
         }
-        setSaving(false);
     }
 
     async function handleDeactivate(id: string) {
         if (!confirm('Deactivate this product? It will no longer appear in the store.')) return;
-        const res = await fetch(`${API}/admin/products/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
+        try {
+            // Usually we'd just update 'isActive: false' but if you want true DELETE:
+            await deleteDoc(doc(db, 'products', id));
             fetchAll();
-        } else {
-            const data = await res.json().catch(() => ({}));
-            alert(data.message || 'Failed to deactivate product.');
+        } catch (err: any) {
+            alert(err.message || 'Failed to deactivate product.');
         }
     }
 
@@ -109,22 +125,17 @@ export default function ProductsTab({ token }: { token: string }) {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const formData = new FormData();
-        formData.append('image', file);
-
         try {
-            const res = await fetch(`${API}/admin/upload`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData
-            });
-            const data = await res.json();
-            if (data.success) {
-                setForm(f => ({ ...f, imageUrl: data.data.url }));
-            } else {
-                alert(data.message || 'Image upload failed');
-            }
+            const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+            const storageRef = ref(storage, `products/${filename}`);
+
+            // Upload to Firebase Cloud Storage
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadUrl = await getDownloadURL(snapshot.ref);
+
+            setForm(f => ({ ...f, imageUrl: downloadUrl }));
         } catch (err) {
+            console.error("Firebase Storage Upload Error:", err);
             alert('Image upload failed');
         }
     }
@@ -187,6 +198,10 @@ export default function ProductsTab({ token }: { token: string }) {
                         <div>
                             <Label>Price (€)</Label>
                             <input style={inp()} type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
+                        </div>
+                        <div>
+                            <Label>Compare At Price (€)</Label>
+                            <input style={inp()} type="number" step="0.01" placeholder="Original Price" value={form.compareAtPrice} onChange={e => setForm(f => ({ ...f, compareAtPrice: e.target.value }))} />
                         </div>
                         <div>
                             <Label>Stock Quantity</Label>

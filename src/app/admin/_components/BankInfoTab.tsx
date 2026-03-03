@@ -1,5 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -10,9 +12,19 @@ export default function BankInfoTab({ token }: { token: string }) {
     const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
     useEffect(() => {
-        fetch(`${API}/admin/bank-info`, { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => r.json())
-            .then(d => { if (d.data) setForm({ accountHolder: d.data.accountHolder || '', bankName: d.data.bankName || '', iban: d.data.iban || '', bic: d.data.bic || '', instructions: d.data.instructions || '' }); })
+        getDoc(doc(db, 'settings', 'bankInfo'))
+            .then(snap => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    setForm({
+                        accountHolder: data.accountHolder || '',
+                        bankName: data.bankName || '',
+                        iban: data.iban || '',
+                        bic: data.bic || '',
+                        instructions: data.instructions || ''
+                    });
+                }
+            })
             .catch(() => { })
             .finally(() => setLoading(false));
     }, [token]);
@@ -21,14 +33,13 @@ export default function BankInfoTab({ token }: { token: string }) {
         e.preventDefault();
         setSaving(true); setMsg(null);
         try {
-            const res = await fetch(`${API}/admin/bank-info`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify(form),
-            });
-            setMsg(res.ok ? { text: 'Bank details saved successfully', ok: true } : { text: 'Failed to save. Please try again.', ok: false });
+            await setDoc(doc(db, 'settings', 'bankInfo'), {
+                ...form,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            setMsg({ text: 'Bank details saved successfully', ok: true });
         } catch {
-            setMsg({ text: 'Network error. Check the backend is running.', ok: false });
+            setMsg({ text: 'Failed to save to Firebase.', ok: false });
         } finally {
             setSaving(false);
         }

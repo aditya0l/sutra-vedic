@@ -1,5 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -88,14 +90,20 @@ export default function OrdersTab({ token }: { token: string }) {
     const setAction = (id: string, patch: Partial<{ tracking: string; note: string; loading: boolean }>) =>
         setActionState(prev => ({ ...prev, [id]: { ...getAction(id), ...patch } }));
 
-    const fetchOrders = useCallback(() => {
+    const fetchOrders = useCallback(async () => {
         setLoading(true);
-        const url = `${API}/admin/orders${filter ? `?status=${filter}` : ''}`;
-        fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => r.json())
-            .then(d => setOrders(d.data || []))
-            .catch(() => { })
-            .finally(() => setLoading(false));
+        try {
+            // Can't natively sort & filter perfectly in client without composite indices, 
+            // so we pull all (or recent) and filter in JS for now as MVP NoSQL migration
+            const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setOrders(data);
+        } catch (err) {
+            console.error("Error fetching orders:", err);
+        } finally {
+            setLoading(false);
+        }
     }, [token, filter]);
 
     useEffect(() => { fetchOrders(); }, [fetchOrders]);
@@ -103,20 +111,16 @@ export default function OrdersTab({ token }: { token: string }) {
     async function updateStatus(orderId: string, status: string, extra?: Record<string, string>) {
         setAction(orderId, { loading: true });
         try {
-            const res = await fetch(`${API}/admin/orders/${orderId}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ status, ...(extra || {}) }),
+            const orderRef = doc(db, 'orders', orderId);
+            await updateDoc(orderRef, {
+                status,
+                ...(extra || {}),
+                updatedAt: new Date().toISOString()
             });
-            const data = await res.json();
-            if (res.ok) {
-                fetchOrders();
-                setExpanded(null);
-            } else {
-                alert(data.message || 'Failed to update order status.');
-            }
-        } catch {
-            alert('Network error. Check that the backend is running.');
+            fetchOrders();
+            setExpanded(null);
+        } catch (err: any) {
+            alert(err.message || 'Failed to update order status.');
         } finally {
             setAction(orderId, { loading: false });
         }

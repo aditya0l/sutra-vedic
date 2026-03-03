@@ -1,5 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -41,11 +43,40 @@ export default function DashboardTab({ token }: { token: string }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${API}/admin/stats`, { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => r.json())
-            .then(d => setStats(d.data))
-            .catch(() => { })
-            .finally(() => setLoading(false));
+        async function fetchStats() {
+            try {
+                const [ordersSnap, productsSnap] = await Promise.all([
+                    getDocs(collection(db, 'orders')),
+                    getDocs(collection(db, 'products'))
+                ]);
+
+                let totalOrders = 0;
+                let pendingOrders = 0;
+                let confirmedRevenue = 0;
+
+                ordersSnap.forEach(doc => {
+                    const data = doc.data();
+                    totalOrders++;
+                    if (data.status === 'pending_payment') {
+                        pendingOrders++;
+                    } else if (data.status !== 'cancelled') {
+                        confirmedRevenue += (data.totalAmount || 0);
+                    }
+                });
+
+                setStats({
+                    totalOrders,
+                    pendingOrders,
+                    confirmedRevenue,
+                    totalProducts: productsSnap.size
+                });
+            } catch (err) {
+                console.error("Failed to load stats", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchStats();
     }, [token]);
 
     return (
@@ -90,7 +121,7 @@ export default function DashboardTab({ token }: { token: string }) {
                     </div>
                 </>
             ) : (
-                <div style={{ color: '#ef4444', fontSize: 14 }}>Could not load stats. Check that the backend is running on port 4000.</div>
+                <div style={{ color: '#ef4444', fontSize: 14 }}>Could not load stats from Firebase.</div>
             )}
         </div>
     );

@@ -4,12 +4,13 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCart } from '@/lib/cart-context';
 import { ordersApi, auth } from '@/lib/api';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { getLocalizedValue, formatPrice } from '@/lib/utils';
 import { CreditCard, Lock, ShieldCheck, Check, AlertCircle, Building2, Copy } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 interface BankInfo { accountHolder: string; bankName: string; iban: string; bic: string; instructions: string; }
 
@@ -56,10 +57,9 @@ function CheckoutContent() {
         setError('');
 
         try {
-            // Fetch bank info
-            const bRes = await fetch(`${API}/bank-info`);
-            const bData = await bRes.json();
-            const bank: BankInfo = bData.data;
+            // Fetch bank info from Firestore
+            const bankDoc = await getDoc(doc(db, 'settings', 'bankInfo'));
+            const bank: BankInfo = bankDoc.exists() ? bankDoc.data() as BankInfo : { accountHolder: '', bankName: '', iban: '', bic: '', instructions: '' };
 
             // Create order
             const isLoggedIn = auth.isLoggedIn();

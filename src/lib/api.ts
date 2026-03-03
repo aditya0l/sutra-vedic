@@ -4,26 +4,25 @@
  */
 
 import { Product, Category, Review, Order, User } from '@/types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('sutravedic-token') : null;
-
-    const res = await fetch(`${API_URL}${path}`, {
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        ...options,
-    });
-
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || 'API request failed');
-    return json.data as T;
-}
+import { auth as firebaseAuth, db } from './firebase';
+import {
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    updateProfile
+} from 'firebase/auth';
+import {
+    collection,
+    getDocs,
+    getDoc,
+    doc,
+    query,
+    where,
+    orderBy,
+    limit as firestoreLimit,
+    addDoc,
+    updateDoc
+} from 'firebase/firestore';
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -35,50 +34,73 @@ export interface AuthResponse {
 
 export const auth = {
     async login(email: string, password: string): Promise<AuthResponse> {
-        const json = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        }).then(r => r.json());
-        if (!json.success) throw new Error(json.message);
-        localStorage.setItem('sutravedic-token', json.data.accessToken);
-        localStorage.setItem('sutravedic-refresh-token', json.data.refreshToken);
-        return json.data;
+        const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+        const token = await userCredential.user.getIdToken();
+
+        // Simulating the backend response format for compatibility with existing UI
+        const authData = {
+            user: {
+                id: userCredential.user.uid,
+                email: userCredential.user.email!,
+                name: userCredential.user.displayName || email.split('@')[0],
+                role: 'customer' as const,
+                createdAt: userCredential.user.metadata.creationTime || new Date().toISOString()
+            },
+            accessToken: token,
+            refreshToken: userCredential.user.refreshToken
+        };
+
+        localStorage.setItem('sutravedic-token', token);
+        return authData;
     },
 
     async register(name: string, email: string, password: string): Promise<AuthResponse> {
-        const json = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password }),
-        }).then(r => r.json());
-        if (!json.success) throw new Error(json.message);
-        localStorage.setItem('sutravedic-token', json.data.accessToken);
-        localStorage.setItem('sutravedic-refresh-token', json.data.refreshToken);
-        return json.data;
+        const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+
+        // Update display name
+        await updateProfile(userCredential.user, { displayName: name });
+        const token = await userCredential.user.getIdToken();
+
+        const authData = {
+            user: {
+                id: userCredential.user.uid,
+                email: userCredential.user.email!,
+                name: name,
+                role: 'customer' as const,
+                createdAt: new Date().toISOString()
+            },
+            accessToken: token,
+            refreshToken: userCredential.user.refreshToken
+        };
+
+        localStorage.setItem('sutravedic-token', token);
+        return authData;
     },
 
     async refresh(): Promise<{ accessToken: string; refreshToken: string }> {
-        const refreshToken = localStorage.getItem('sutravedic-refresh-token');
-        if (!refreshToken) throw new Error('No refresh token');
-        const json = await fetch(`${API_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-        }).then(r => r.json());
-        if (!json.success) throw new Error(json.message);
-        localStorage.setItem('sutravedic-token', json.data.accessToken);
-        localStorage.setItem('sutravedic-refresh-token', json.data.refreshToken);
-        return json.data;
+        // Firebase automatically handles token refreshes internally if the user is signed in.
+        // If we strictly need a fresh token right now:
+        const user = firebaseAuth.currentUser;
+        if (!user) throw new Error('No user is currently signed in');
+
+        const token = await user.getIdToken(true);
+        localStorage.setItem('sutravedic-token', token);
+
+        return {
+            accessToken: token,
+            refreshToken: user.refreshToken
+        };
     },
 
-    logout() {
+    async logout(): Promise<void> {
+        await signOut(firebaseAuth);
         localStorage.removeItem('sutravedic-token');
         localStorage.removeItem('sutravedic-refresh-token');
     },
 
     isLoggedIn(): boolean {
         if (typeof window === 'undefined') return false;
+        // Check local storage for quick synchronous checks, but remember Firebase Auth state is the real source of truth
         return !!localStorage.getItem('sutravedic-token');
     },
 
@@ -105,26 +127,57 @@ export const productsApi = {
         page?: number;
         limit?: number;
     }): Promise<ProductListResult> {
-        const qs = new URLSearchParams();
-        if (params?.category) qs.set('category', params.category);
-        if (params?.search) qs.set('search', params.search);
-        if (params?.sort) qs.set('sort', params.sort);
-        if (params?.isBestseller) qs.set('isBestseller', 'true');
-        if (params?.isNew) qs.set('isNew', 'true');
-        if (params?.page) qs.set('page', String(params.page));
-        if (params?.limit) qs.set('limit', String(params.limit));
+        let q = collection(db, 'products');
+        let queryConstraints: any[] = [];
 
-        const res = await fetch(`${API_URL}/products?${qs.toString()}`);
-        const json = await res.json();
-        return { data: json.data ?? [], meta: json.meta };
+        if (params?.category) {
+            queryConstraints.push(where('category', '==', params.category));
+        }
+        if (params?.isBestseller) {
+            queryConstraints.push(where('isBestseller', '==', true));
+        }
+        if (params?.isNew) {
+            queryConstraints.push(where('isNew', '==', true));
+        }
+        if (params?.sort === 'price_asc') {
+            queryConstraints.push(orderBy('price', 'asc'));
+        } else if (params?.sort === 'price_desc') {
+            queryConstraints.push(orderBy('price', 'desc'));
+        }
+
+        // Note: Firestore doesn't natively support full-text search easily like SQL. 
+        // For 'search', a third-party service like Algolia is usually recommended, 
+        // but we'll fetch everything and filter client-side for this MVP if search is used.
+
+        let finalQuery = queryConstraints.length > 0 ? query(q, ...queryConstraints) : q;
+        const snapshot = await getDocs(finalQuery);
+
+        let products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+
+        if (params?.search) {
+            products = products.filter(p => p.name.en.toLowerCase().includes(params.search!.toLowerCase()) || p.description.en.toLowerCase().includes(params.search!.toLowerCase()));
+        }
+
+        // Fake pagination metadata since Firestore pagination requires cursors
+        return {
+            data: products,
+            meta: { total: products.length, page: 1, pages: 1, limit: products.length }
+        };
     },
 
     async getBySlug(slug: string): Promise<Product> {
-        return apiFetch<Product>(`/products/${slug}`);
+        const q = query(collection(db, 'products'), where('slug', '==', slug));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) throw new Error("Product not found");
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as Product;
     },
 
     async getReviews(slug: string): Promise<Review[]> {
-        return apiFetch<Review[]>(`/products/${slug}/reviews`);
+        // Technically reviews should be subcollections or tied to product ID, but matching by slug here for simplicity based on old API
+        const q = query(collection(db, 'reviews'), where('productSlug', '==', slug));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
     },
 };
 
@@ -132,9 +185,8 @@ export const productsApi = {
 
 export const categoriesApi = {
     async list(): Promise<Category[]> {
-        const res = await fetch(`${API_URL}/products/categories`);
-        const json = await res.json();
-        return json.data ?? [];
+        const snapshot = await getDocs(collection(db, 'categories'));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
     },
 };
 
@@ -159,18 +211,48 @@ export interface CheckoutPayload {
 
 export const ordersApi = {
     async create(payload: CheckoutPayload): Promise<{ id: string; totalAmount: number; idempotencyKey: string }> {
-        return apiFetch('/orders', {
-            method: 'POST',
-            body: JSON.stringify(payload),
-        });
+        const user = firebaseAuth.currentUser;
+
+        // Simplified Total Amount Calculation for MVP Firebase Migration
+        let totalAmount = 0;
+        for (const item of payload.items) {
+            const productDoc = await getDoc(doc(db, 'products', item.productId));
+            if (productDoc.exists()) {
+                totalAmount += (productDoc.data().price * item.quantity);
+            }
+        }
+
+        const newOrder = {
+            userId: user?.uid || null,
+            ...payload,
+            totalAmount,
+            status: 'PENDING',
+            createdAt: new Date().toISOString(),
+        }
+
+        const docRef = await addDoc(collection(db, 'orders'), newOrder);
+
+        return {
+            id: docRef.id,
+            totalAmount,
+            idempotencyKey: docRef.id
+        };
     },
 
     async list(): Promise<Order[]> {
-        return apiFetch<Order[]>('/orders');
+        const user = firebaseAuth.currentUser;
+        if (!user) throw new Error("Must be logged in to view orders");
+
+        const q = query(collection(db, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Order));
     },
 
     async getById(id: string): Promise<Order> {
-        return apiFetch<Order>(`/orders/${id}`);
+        const docRef = await getDoc(doc(db, 'orders', id));
+        if (!docRef.exists()) throw new Error("Order not found");
+        return { id: docRef.id, ...docRef.data() } as unknown as Order;
     },
 };
 
@@ -178,10 +260,9 @@ export const ordersApi = {
 
 export const paymentsApi = {
     async createStripeIntent(orderId: string): Promise<{ clientSecret: string }> {
-        return apiFetch<{ clientSecret: string }>('/payments/stripe/intent', {
-            method: 'POST',
-            body: JSON.stringify({ orderId }),
-        });
+        // Without a custom backend, secure Stripe payments usually require a Cloud Function to mint the intent.
+        // For a raw frontend rewrite, you'd integrate the Stripe Next.js proxy here, or stub it out if testing.
+        throw new Error("Stripe Intents require a secure Cloud Function backend environment or edge proxy.");
     },
 };
 
@@ -189,13 +270,36 @@ export const paymentsApi = {
 
 export const customerApi = {
     async getProfile(): Promise<User & { phone?: string }> {
-        return apiFetch('/customer/profile');
+        const user = firebaseAuth.currentUser;
+        if (!user) throw new Error("Not logged in");
+
+        const docRef = await getDoc(doc(db, 'users', user.uid));
+
+        if (docRef.exists()) {
+            return { id: user.uid, ...docRef.data() } as User & { phone?: string };
+        } else {
+            // Fallback to Auth state
+            return {
+                id: user.uid,
+                email: user.email!,
+                name: user.displayName || 'Customer',
+                role: 'customer'
+            }
+        }
     },
 
     async updateProfile(data: { name?: string; phone?: string }): Promise<User> {
-        return apiFetch('/customer/profile', {
-            method: 'PATCH',
-            body: JSON.stringify(data),
-        });
+        const user = firebaseAuth.currentUser;
+        if (!user) throw new Error("Not logged in");
+
+        if (data.name) {
+            await updateProfile(user, { displayName: data.name });
+        }
+
+        // Update custom `users` collection manually
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, { ...data, updatedAt: new Date().toISOString() });
+
+        return this.getProfile();
     },
 };

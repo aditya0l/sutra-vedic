@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
     const [email, setEmail] = useState('admin@sutravedic.com');
@@ -14,18 +15,10 @@ export default function LoginPage({ onLogin }: { onLogin: (token: string) => voi
         setError('');
         setLoading(true);
         try {
-            const res = await fetch(`${API}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.success) { setError(data.message || 'Login failed'); return; }
-            if (data.data?.user?.role?.toUpperCase() !== 'ADMIN') {
-                setError('Access denied — admin account required'); return;
-            }
-            localStorage.setItem('admin_refresh_token', data.data.refreshToken || '');
-            onLogin(data.data.accessToken);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            const token = await user.getIdToken();
+            onLogin(token);
         } catch {
             setError('Server unreachable. Make sure the backend is running.');
         } finally {

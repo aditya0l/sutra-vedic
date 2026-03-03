@@ -64,7 +64,6 @@ export default function AdminShell({ token, onLogout }: { token: string; onLogou
                                 onClick={() => setTab(n.id)}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 10,
-                                    width: '100%', padding: '10px 16px',
                                     margin: '2px 0',
                                     background: active ? 'rgba(201,168,76,0.15)' : 'transparent',
                                     border: 'none', cursor: 'pointer', textAlign: 'left',

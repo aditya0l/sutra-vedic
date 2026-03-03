@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import WhatsAppButton from '@/components/layout/WhatsAppButton';
+// WhatsApp Button removed
 import CookieBanner from '@/components/layout/CookieBanner';
 import { CartProvider } from '@/lib/cart-context';
 
@@ -66,7 +66,6 @@ export default async function LocaleLayout({ children, params }: Props) {
                             {children}
                         </main>
                         <Footer />
-                        <WhatsAppButton />
                         <CookieBanner />
                     </CartProvider>
                 </NextIntlClientProvider>

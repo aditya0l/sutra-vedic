@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Admin check function based on Firebase Auth custom claims or a specific Admin UID 
+    // Since we don't have custom claims deployed via Cloud Functions yet, 
+    // we use a specific known Admin email or a document lookup.
+    // In our auth flow, admins log in with: admin@sutravedic.com
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'admin@sutravedic.com';
+    }
+
+    // Is the user authenticated?
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ─── Products Collection ───────────────────────────────────────────────
+    match /products/{productId} {
+      // Anyone can read products (needed for the storefront)
+      allow read: if true;
+      // Only admins can create/update/delete products
+      allow write: if isAdmin();
+    }
+
+    // ─── Categories Collection ─────────────────────────────────────────────
+    match /categories/{categoryId} {
+      // Anyone can read categories
+      allow read: if true;
+      // Only admins can create/update/delete categories
+      allow write: if isAdmin();
+    }
+
+    // ─── Orders Collection ─────────────────────────────────────────────────
+    match /orders/{orderId} {
+      // Users can read their own orders. Admins can read all orders.
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      
+      // Anyone can create an order (even guests, but our app forces login for checkout, so we require auth)
+      // If we eventually allow guest checkout, we can change this to `allow create: if true;`
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Only admins can update orders (e.g. changing status to SHIPPED)
+      allow update: if isAdmin();
+      
+      // Nobody should hard-delete orders (maybe only admins if absolutely necessary)
+      allow delete: if isAdmin();
+    }
+
+    // ─── Users Collection (Profiles) ───────────────────────────────────────
+    match /users/{userId} {
+      // Users can only read and write their own profile document. Admins can read/write all.
+      allow read, write: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    }
+    
+    // ─── Settings Collection (Bank Info, etc.) ─────────────────────────────
+    match /settings/{document=**} {
+      // Anyone can read public settings like Bank Info for checkout
+      allow read: if true;
+      // Only admins can change bank info
+      allow write: if isAdmin();
+    }
+    
+    // ─── Reviews Collection ────────────────────────────────────────────────
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+      // Only authenticated users can create reviews
+      allow create: if isAuthenticated();
+      // Users can only edit/delete their own reviews. Admins can moderate all.
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+  }
+}

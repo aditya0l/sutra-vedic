@@ -85,6 +85,11 @@ export default function FeaturedProducts() {
                                     </div>
 
                                     <div className="absolute top-8 left-0 right-0 flex justify-center gap-2">
+                                        {product.compareAtPrice && product.compareAtPrice > product.price && (
+                                            <span className="px-4 py-1.5 bg-[#dc2626] text-white text-[0.65rem] font-bold tracking-widest rounded-full uppercase shadow-md">
+                                                -{Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}%
+                                            </span>
+                                        )}
                                         {product.isBestseller && (
                                             <span className="px-4 py-1.5 bg-transparent border border-[#C9A84C] text-[#C9A84C] text-[0.65rem] font-medium tracking-widest rounded-full uppercase bg-white/50 backdrop-blur-md">
                                                 {t('bestseller')}
@@ -133,7 +138,14 @@ export default function FeaturedProducts() {
                                     </h3>
 
                                     <div className="pt-2 flex flex-col items-center gap-4">
-                                        <span className="text-lg font-medium tracking-wide text-[#0F2E22]">{formatPrice(product.price)}</span>
+                                        <div className="flex items-center gap-3">
+                                            {product.compareAtPrice && product.compareAtPrice > product.price && (
+                                                <span className="text-[0.9rem] text-gray-400 line-through font-medium">
+                                                    {formatPrice(product.compareAtPrice)}
+                                                </span>
+                                            )}
+                                            <span className="text-lg font-medium tracking-wide text-[#0F2E22]">{formatPrice(product.price)}</span>
+                                        </div>
                                         <span className="inline-flex items-center gap-2 text-[0.65rem] border-b border-transparent group-hover:border-[#C9A84C] pb-0.5 font-medium text-[#C9A84C] transition-all uppercase tracking-[0.15em]">
                                             {locale === 'fr' ? 'Découvrir' : 'Discover'}
                                         </span>
