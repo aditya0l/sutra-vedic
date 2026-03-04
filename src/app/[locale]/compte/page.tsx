@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { auth, ordersApi, customerApi } from '@/lib/api';
+import { auth as firebaseAuth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { User, Order } from '@/types';
 import { User as UserIcon, Package, Heart, Settings, LogOut } from 'lucide-react';
 
@@ -16,6 +18,7 @@ export default function AccountPage() {
     const locale = useLocale();
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [authChecking, setAuthChecking] = useState(true); // true while Firebase resolves session
     const [activeTab, setActiveTab] = useState('profile');
     const [loginForm, setLoginForm] = useState({ email: '', password: '' });
     const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '' });
@@ -30,26 +33,34 @@ export default function AccountPage() {
     const [refInputs, setRefInputs] = useState<Record<string, string>>({});
     const [submittingRef, setSubmittingRef] = useState<string | null>(null);
 
-    // Check if already logged in on mount
+    // Subscribe to Firebase auth state - persists across page refreshes correctly
     useEffect(() => {
-        if (auth.isLoggedIn()) {
-            setIsLoggedIn(true);
-            customerApi.getProfile()
-                .then(u => {
-                    setUser(u);
-                    setProfileForm({ name: u.name, email: u.email });
-                })
-                .catch(() => {
-                    auth.logout();
-                    setIsLoggedIn(false);
-                });
-        }
+        const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+            if (firebaseUser) {
+                const mappedUser: User = {
+                    id: firebaseUser.uid,
+                    email: firebaseUser.email!,
+                    name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
+                    role: 'customer' as const,
+                };
+                setUser(mappedUser);
+                setProfileForm({ name: mappedUser.name, email: mappedUser.email });
+                setIsLoggedIn(true);
+            } else {
+                setUser(null);
+                setIsLoggedIn(false);
+            }
+            setAuthChecking(false); // Firebase has resolved
+        });
+        return () => unsubscribe();
     }, []);
 
     // Fetch orders when switching to orders tab
     useEffect(() => {
         if (isLoggedIn && activeTab === 'orders') {
-            ordersApi.list().then(setOrders).catch(() => setOrders([]));
+            ordersApi.list()
+                .then(setOrders)
+                .catch((err) => { console.error('Orders fetch error:', err); setOrders([]); });
         }
     }, [isLoggedIn, activeTab]);
 
@@ -148,6 +159,16 @@ export default function AccountPage() {
             setSubmittingRef(null);
         }
     };
+
+    // Show nothing while Firebase is resolving session (prevents flash of login form on refresh)
+    if (authChecking) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div style={{ width: 40, height: 40, border: '3px solid #e5e7eb', borderTop: '3px solid #0F2E22', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
 
     if (!isLoggedIn) {
         return (
