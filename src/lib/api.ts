@@ -281,10 +281,29 @@ export const ordersApi = {
         const user = firebaseAuth.currentUser;
         if (!user) throw new Error("Must be logged in to view orders");
 
-        const q = query(collection(db, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
+        // Query by userId (works for logged-in checkout)
+        const byUserId = await getDocs(
+            query(collection(db, 'orders'), where('userId', '==', user.uid))
+        );
 
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Order));
+        // Also query by email in case the order was placed with a form email that matches
+        const byEmail = user.email ? await getDocs(
+            query(collection(db, 'orders'), where('email', '==', user.email))
+        ) : { docs: [] as any[] };
+
+        // Merge and deduplicate by document ID
+        const seen = new Set<string>();
+        const allOrders: Order[] = [];
+        for (const d of [...byUserId.docs, ...byEmail.docs]) {
+            if (!seen.has(d.id)) {
+                seen.add(d.id);
+                allOrders.push({ id: d.id, ...d.data() } as unknown as Order);
+            }
+        }
+
+        // Sort newest first client-side (no composite index needed)
+        allOrders.sort((a: any, b: any) => b.createdAt?.localeCompare?.(a.createdAt) ?? 0);
+        return allOrders;
     },
 
     async getById(id: string): Promise<Order> {

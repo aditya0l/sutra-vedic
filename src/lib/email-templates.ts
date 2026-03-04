@@ -25,11 +25,15 @@ const styles = `
     .value { font-size: 14px; font-weight: 500; color: #111827; }
 `;
 
-function buildOrderSummary(order: Order, locale: 'en' | 'fr') {
-    const itemsHtml = order.items.map(item => {
-        const name = typeof item.product.name === 'object' ? (locale === 'fr' ? item.product.name.fr : item.product.name.en) : item.product.name;
-        // The API maps generic records for items, let's format safely
-        const price = (item as any).price || (item as any).unitPrice || item.product.price;
+function buildOrderSummary(order: any, locale: 'en' | 'fr') {
+    const itemsHtml = (order.items || []).map((item: any) => {
+        // New schema: item.productSnapshot.name / item.unitPrice
+        // Old schema: item.product.name / item.price
+        const snapName = item.productSnapshot?.name;
+        const productName = item.product?.name;
+        const rawName = snapName || productName || 'Product';
+        const name = typeof rawName === 'object' ? (locale === 'fr' ? rawName.fr : rawName.en) : rawName;
+        const price = item.unitPrice || item.price || item.product?.price || 0;
         return `
             <div class="item-row">
                 <span>${item.quantity}x ${name}</span>
@@ -38,13 +42,15 @@ function buildOrderSummary(order: Order, locale: 'en' | 'fr') {
         `;
     }).join('');
 
+    const total = order.total || order.totalAmount || 0;
+
     return `
         <div class="order-details">
             <h3 style="margin-top: 0; font-size: 16px;">${locale === 'fr' ? 'Détails de la commande' : 'Order Details'} (Ref: SUTRAVEDIC-${order.id.slice(0, 8).toUpperCase()})</h3>
             ${itemsHtml}
             <div class="total-row">
                 <span>Total</span>
-                <span>${formatPrice(order.total)}</span>
+                <span>${formatPrice(total)}</span>
             </div>
         </div>
     `;
@@ -54,8 +60,9 @@ function buildOrderSummary(order: Order, locale: 'en' | 'fr') {
 
 export function getAdminNewOrderEmail({ order, customerName, customerEmail }: EmailTemplateProps) {
     const ref = order.id.slice(0, 8).toUpperCase();
+    const total = (order as any).total || (order as any).totalAmount || 0;
     return {
-        subject: `[New Order] SUTRAVEDIC-${ref} - €${order.total.toFixed(2)}`,
+        subject: `[New Order] SUTRAVEDIC-${ref} - €${total.toFixed(2)}`,
         html: `
             <html>
                 <head><style>${styles}</style></head>
@@ -157,7 +164,7 @@ export function getCustomerOrderConfirmationEmail({ order, locale, customerName,
                                 <div style="margin-bottom: 8px;"><span class="label">${isFr ? 'Bénéficiaire' : 'Account Holder'}:</span> <span class="value">${bankInfo.accountHolder}</span></div>
                                 <div style="margin-bottom: 8px;"><span class="label">Banque:</span> <span class="value">${bankInfo.bankName}</span></div>
                                 <div style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed #E8D8A0;">
-                                    <div style="margin-bottom: 8px;"><span class="label">${isFr ? 'Montant à transférer' : 'Amount to transfer'}:</span> <span class="value" style="color: #C9A84C; font-size: 18px; font-weight: bold;">${formatPrice(order.total)}</span></div>
+                                    <div style="margin-bottom: 8px;"><span class="label">${isFr ? 'Montant à transférer' : 'Amount to transfer'}:</span> <span class="value" style="color: #C9A84C; font-size: 18px; font-weight: bold;">${formatPrice((order as any).total || (order as any).totalAmount || 0)}</span></div>
                                     <div><span class="label">${isFr ? 'Référence de virement' : 'Transfer Reference'}:</span> <span class="value" style="font-family: monospace;">SUTRAVEDIC-${ref}</span></div>
                                 </div>
                             </div>

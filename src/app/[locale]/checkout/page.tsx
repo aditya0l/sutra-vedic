@@ -78,6 +78,7 @@ function CheckoutContent() {
             const orderData = await ordersApi.create({
                 items: items.map(i => ({ productId: i.product.id, quantity: i.quantity, variantId: i.variantId })),
                 shippingAddress,
+                email: form.email,
                 locale: locale as 'fr' | 'en',
             });
 
@@ -95,7 +96,7 @@ function CheckoutContent() {
                     action: 'ORDER_CREATED',
                     order: orderData,
                     locale: locale,
-                    customerEmail: (form as any).email,
+                    customerEmail: form.email,
                     customerName: `${form.firstName} ${form.lastName}`,
                     extra: { bankInfo: bank }
                 })

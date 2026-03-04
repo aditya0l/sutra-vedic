@@ -391,7 +391,7 @@ export default function AccountPage() {
                                                         <span className={`px-4 py-1.5 rounded-full text-[0.65rem] font-medium tracking-widest uppercase ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#FEFAE0] text-[#0F2E22] border border-[#C9A84C]'}`}>
                                                             {order.status}
                                                         </span>
-                                                        <p className="font-medium text-xl tracking-wide text-forest-dark">{formatPrice(order.total)}</p>
+                                                        <p className="font-medium text-xl tracking-wide text-forest-dark">{formatPrice((order as any).total || (order as any).totalAmount || 0)}</p>
                                                     </div>
                                                 </div>
                                             ))}

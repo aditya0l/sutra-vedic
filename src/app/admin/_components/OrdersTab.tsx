@@ -93,10 +93,10 @@ export default function OrdersTab({ token }: { token: string }) {
     const [filter, setFilter] = useState('');
     const [expanded, setExpanded] = useState<string | null>(null);
     // Per-order action state to avoid shared state bug
-    const [actionState, setActionState] = useState<Record<string, { tracking: string; note: string; loading: boolean }>>({});
+    const [actionState, setActionState] = useState<Record<string, { tracking: string; note: string; loading: boolean; confirmCancel: boolean }>>({});
 
-    const getAction = (id: string) => actionState[id] || { tracking: '', note: '', loading: false };
-    const setAction = (id: string, patch: Partial<{ tracking: string; note: string; loading: boolean }>) =>
+    const getAction = (id: string) => actionState[id] || { tracking: '', note: '', loading: false, confirmCancel: false };
+    const setAction = (id: string, patch: Partial<{ tracking: string; note: string; loading: boolean; confirmCancel: boolean }>) =>
         setActionState(prev => ({ ...prev, [id]: { ...getAction(id), ...patch } }));
 
     const fetchOrders = useCallback(async () => {
@@ -130,8 +130,8 @@ export default function OrdersTab({ token }: { token: string }) {
             // Trigger Email Update
             const order = orders.find(o => o.id === orderId);
             if (order) {
-                const customerEmail = order.user?.email || order.guestEmail;
-                const customerName = order.user?.name || order.guestName;
+                const customerEmail = order.email || order.user?.email || order.guestEmail;
+                const customerName = order.guestName || order.user?.name || (order.shippingAddress ? `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}` : '');
                 if (customerEmail) {
                     fetch('/api/email', {
                         method: 'POST',
@@ -265,7 +265,10 @@ export default function OrdersTab({ token }: { token: string }) {
                                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Customer & Shipping</div>
                                                 <div style={{ fontSize: 13, lineHeight: 1.8, color: '#374151' }}>
                                                     <div style={{ fontWeight: 600, color: '#0f172a' }}>{order.user?.name || order.guestName || '—'}</div>
-                                                    <div style={{ color: '#64748b' }}>{order.user?.email || order.guestEmail || '—'}</div>
+                                                    <div style={{ color: '#64748b' }}>{order.email || order.user?.email || order.guestEmail || '—'}</div>
+                                                    {(order.shippingAddress?.phone || order.phone) && (
+                                                        <div style={{ color: '#64748b' }}>📞 {order.shippingAddress?.phone || order.phone}</div>
+                                                    )}
                                                     {order.shippingAddress && (
                                                         <div style={{ marginTop: 8, color: '#475569', borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
                                                             {order.shippingAddress.address}<br />
@@ -347,27 +350,48 @@ export default function OrdersTab({ token }: { token: string }) {
                                                 )}
 
                                                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
-                                                    <input
-                                                        placeholder="Cancellation reason"
-                                                        value={act.note}
-                                                        onChange={e => setAction(order.id, { note: e.target.value })}
-                                                        style={{
-                                                            padding: '8px 12px', border: '1px solid #fca5a5',
-                                                            borderRadius: 8, fontSize: 13, width: 200, outline: 'none',
-                                                            background: '#fff8f8',
-                                                        }}
-                                                    />
-                                                    <Btn
-                                                        variant="danger"
-                                                        disabled={act.loading}
-                                                        onClick={() => {
-                                                            if (confirm('Are you sure you want to cancel this order?')) {
-                                                                updateStatus(order.id, 'cancelled', act.note ? { adminNote: act.note } : {});
-                                                            }
-                                                        }}
-                                                    >
-                                                        <IconX /> Cancel Order
-                                                    </Btn>
+                                                    {!act.confirmCancel ? (
+                                                        <>
+                                                            <input
+                                                                placeholder="Cancellation reason"
+                                                                value={act.note}
+                                                                onChange={e => setAction(order.id, { note: e.target.value })}
+                                                                style={{
+                                                                    padding: '8px 12px', border: '1px solid #fca5a5',
+                                                                    borderRadius: 8, fontSize: 13, width: 200, outline: 'none',
+                                                                    background: '#fff8f8',
+                                                                }}
+                                                            />
+                                                            <Btn
+                                                                variant="danger"
+                                                                disabled={act.loading}
+                                                                onClick={() => setAction(order.id, { confirmCancel: true })}
+                                                            >
+                                                                <IconX /> Cancel Order
+                                                            </Btn>
+                                                        </>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, padding: '8px 14px' }}>
+                                                            <span style={{ fontSize: 13, color: '#be123c', fontWeight: 600 }}>Confirm cancel?</span>
+                                                            <Btn
+                                                                variant="danger"
+                                                                disabled={act.loading}
+                                                                onClick={() => {
+                                                                    updateStatus(order.id, 'cancelled', act.note ? { adminNote: act.note } : {});
+                                                                    setAction(order.id, { confirmCancel: false });
+                                                                }}
+                                                            >
+                                                                Yes, Cancel
+                                                            </Btn>
+                                                            <Btn
+                                                                variant="ghost"
+                                                                disabled={act.loading}
+                                                                onClick={() => setAction(order.id, { confirmCancel: false })}
+                                                            >
+                                                                No, Keep
+                                                            </Btn>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
