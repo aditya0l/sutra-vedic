@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import AdminShell from './_components/AdminShell';
 import LoginPage from './_components/LoginPage';
+import { auth as firebaseAuth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 
 export default function AdminPage() {
     const [mounted, setMounted] = useState(false);
@@ -18,5 +20,9 @@ export default function AdminPage() {
         return <LoginPage onLogin={(t) => { localStorage.setItem('admin_token', t); setToken(t); }} />;
     }
 
-    return <AdminShell token={token} onLogout={() => { localStorage.removeItem('admin_token'); setToken(null); }} />;
+    return <AdminShell token={token} onLogout={async () => {
+        await signOut(firebaseAuth);
+        localStorage.removeItem('admin_token');
+        setToken(null);
+    }} />;
 }

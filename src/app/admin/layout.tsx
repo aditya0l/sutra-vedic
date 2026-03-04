@@ -7,8 +7,10 @@ export const metadata: Metadata = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div style={{ margin: 0, padding: 0, fontFamily: "system-ui, -apple-system, 'Inter', sans-serif" }}>
-            {children}
-        </div>
+        <html lang="en">
+            <body style={{ margin: 0, padding: 0, fontFamily: "system-ui, -apple-system, 'Inter', sans-serif" }}>
+                {children}
+            </body>
+        </html>
     );
 }
