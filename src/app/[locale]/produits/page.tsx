@@ -114,7 +114,7 @@ function ShopContent() {
                                     className="block space-y-6"
                                 >
                                     {/* Image Container */}
-                                    <div className="relative aspect-[4/5] bg-white rounded-[2rem] overflow-hidden shadow-[0_10px_40px_-15px_rgba(0,0,0,0.08)] group-hover:shadow-[0_20px_80px_-20px_rgba(0,0,0,0.12)] transition-all duration-700">
+                                    <div className="relative aspect-[4/5] bg-white rounded-[2.5rem] overflow-hidden shadow-[0_10px_40px_-15px_rgba(0,0,0,0.08)] group-hover:shadow-[0_20px_80px_-20px_rgba(0,0,0,0.12)] transition-all duration-700 border border-cream-dark/10">
                                         <div className="absolute inset-0 flex items-center justify-center p-0">
                                             {product.images?.[0] ? (
                                                 <img
@@ -123,9 +123,9 @@ function ShopContent() {
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.2s] ease-out-expo"
                                                 />
                                             ) : (
-                                                <div className="w-full h-full bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform duration-[1.2s] ease-out-expo">
+                                                <div className="w-full h-full bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 flex items-center justify-center group-hover:scale-105 transition-transform duration-[1.2s] ease-out-expo">
                                                     <span className="text-8xl filter grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700">
-                                                        {product.slug.includes('pain') ? '🩹' : product.slug.includes('massage') ? '🧴' : '🍃'}
+                                                        🌿
                                                     </span>
                                                 </div>
                                             )}
@@ -133,17 +133,17 @@ function ShopContent() {
 
                                         <div className="absolute top-8 left-0 right-0 flex justify-center gap-2">
                                             {product.compareAtPrice && product.compareAtPrice > product.price && (
-                                                <span className="px-4 py-1.5 bg-[#dc2626] text-white text-[0.65rem] font-bold tracking-widest rounded-full uppercase shadow-md">
+                                                <span className="px-4 py-1.5 bg-[#dc2626] text-white text-[0.65rem] font-bold tracking-widest rounded-full uppercase shadow-md text-center">
                                                     -{Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}%
                                                 </span>
                                             )}
                                             {product.isBestseller && (
-                                                <span className="px-4 py-1.5 bg-transparent border border-[#C9A84C] text-[#C9A84C] text-[0.65rem] font-medium tracking-widest rounded-full uppercase bg-white/50 backdrop-blur-md">
+                                                <span className="px-3 py-1 bg-white/80 backdrop-blur-md border border-[#C9A84C] text-[#C9A84C] text-[0.6rem] font-bold tracking-widest rounded-full uppercase text-center">
                                                     BEST SELLER
                                                 </span>
                                             )}
                                             {product.isNew && (
-                                                <span className="px-4 py-1.5 bg-transparent border border-[#0F2E22] text-[#0F2E22] text-[0.65rem] font-medium tracking-widest rounded-full uppercase bg-white/50 backdrop-blur-md">
+                                                <span className="px-3 py-1 bg-white/80 backdrop-blur-md border border-[#0F2E22] text-[#0F2E22] text-[0.6rem] font-bold tracking-widest rounded-full uppercase text-center">
                                                     NOUVEAU
                                                 </span>
                                             )}
@@ -172,11 +172,17 @@ function ShopContent() {
                                                     ? getLocalizedValue(product.category as { fr: string; en: string }, locale)
                                                     : product.category}
                                             </p>
-                                            <div className="flex items-center justify-center gap-1.5">
-                                                {Array.from({ length: 5 }).map((_, i) => (
-                                                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(product.rating) ? 'text-[#C9A84C] fill-[#C9A84C]' : 'text-gray-200'}`} />
-                                                ))}
-                                                <span className="text-[0.7rem] ml-1.5 font-light text-[#0F2E22]/60">({product.reviewCount})</span>
+
+                                            {/* Rating - Increased prominence */}
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="flex items-center gap-1">
+                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                        <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating) ? 'text-[#C9A84C] fill-[#C9A84C]' : 'text-gray-200'}`} />
+                                                    ))}
+                                                </div>
+                                                <span className="text-[0.75rem] font-medium text-[#0F2E22]">
+                                                    {product.rating} <span className="text-[#0F2E22]/40 ml-1 font-light">({product.reviewCount})</span>
+                                                </span>
                                             </div>
                                         </div>
 
@@ -201,7 +207,7 @@ function ShopContent() {
                                                 </span>
                                             </div>
                                             <span className="inline-flex items-center gap-2 text-[0.65rem] border-b border-transparent group-hover:border-[#C9A84C] pb-0.5 font-medium text-[#C9A84C] transition-all uppercase tracking-[0.15em]">
-                                                Détails <ArrowRight className="w-3 h-3" />
+                                                {locale === 'fr' ? 'Détails' : 'Details'} <ArrowRight className="w-3 h-3" />
                                             </span>
                                         </div>
                                     </div>

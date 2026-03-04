@@ -54,7 +54,7 @@ export default function TermsPage() {
 
                     <h2 className="font-serif text-xl text-forest-dark">6. Contact</h2>
                     <p className="text-charcoal-light text-sm leading-relaxed">
-                        Sutra Vedic — contact@sutravedic.fr — +33 1 23 45 67 89
+                        Sutra Vedic — contact@sutravedic.fr
                     </p>
                 </div>
             </div>

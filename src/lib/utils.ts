@@ -1,4 +1,13 @@
 export function formatPrice(price: number, currency = 'EUR'): string {
+    const formatted = new Intl.NumberFormat('en-IE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(price);
+
+    if (currency === 'EUR') {
+        return `${formatted} €`;
+    }
+
     return new Intl.NumberFormat('en-IE', {
         style: 'currency',
         currency,

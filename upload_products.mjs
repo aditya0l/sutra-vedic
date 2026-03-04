@@ -39,6 +39,12 @@ const PRODUCTS = [
             "https://sushainclinic.s3.ap-south-1.amazonaws.com/uploads/17370265306305.webp",
             "https://sushainclinic.s3.ap-south-1.amazonaws.com/uploads/17370265468472.webp"
         ],
+        thumbnails: [
+            "https://sushainclinic.s3.ap-south-1.amazonaws.com/uploads/17370265001635.webp",
+            "https://sushainclinic.s3.ap-south-1.amazonaws.com/uploads/1737026517374.webp",
+            "https://sushainclinic.s3.ap-south-1.amazonaws.com/uploads/17370265306305.webp",
+            "https://sushainclinic.s3.ap-south-1.amazonaws.com/uploads/17370265468472.webp"
+        ],
         variants: [
             { id: "10ml", name: { en: "10ml", fr: "10ml" }, price: 110, sku: "CAN-OIL-PEP-10ML", stock: 50 },
             { id: "30ml", name: { en: "30ml", fr: "30ml" }, price: 214, sku: "CAN-OIL-PEP-30ML", stock: 50 }
@@ -71,7 +77,10 @@ const PRODUCTS = [
             fr: "Kairbossom est une huile de massage mammaire composée d'herbes ayurvédiques et d'extraits naturels qui renforce et tonifie les muscles mammaires. Elle nourrit les seins et rajeunit les cellules adipeuses afin de renforcer les ligaments pectoraux qui définissent la forme des seins et les rendent plus forts et élastiques."
         },
         images: [
-            "https://www.kairaliproducts.in/cdn/shop/files/ayurvedic-breast-massage-oil-for-toning-firming-and-nourishing-the-breast-naturally-kairbossom-1525182.png?v=1761595530&width=1920"
+            "https://www.kairaliproducts.in/cdn/shop/files/ayurvedic-breast-massage-oil-for-toning-firming-and-nourishing-the-breast-naturally-kairbossom-1525182.png?v=1715955306&width=1920"
+        ],
+        thumbnails: [
+            "https://www.kairaliproducts.in/cdn/shop/files/ayurvedic-breast-massage-oil-for-toning-firming-and-nourishing-the-breast-naturally-kairbossom-1525182.png?v=1715955306&width=400"
         ],
         variants: [
             { id: "100ml", name: { en: "100ml", fr: "100ml" }, price: 214, sku: "KAIR-BOSSOM-100ML", stock: 50 }
@@ -104,7 +113,10 @@ const PRODUCTS = [
             fr: "Combo complet de soulagement de la douleur ayurvédique avec les huiles Murivenna, Kottamchukkadi, Karpooradi et le potli Kizhi. Soulagement naturel des douleurs articulaires, musculaires et de l'inflammation. Cadeau parfait pour les parents."
         },
         images: [
-            "https://sheshaayurveda.com/cdn/shop/files/pain-relief-healing-combo-01.png"
+            "https://sheshaayurveda.com/cdn/shop/files/pain-relief-healing-combo-01.png?v=1709812543&width=1920"
+        ],
+        thumbnails: [
+            "https://sheshaayurveda.com/cdn/shop/files/pain-relief-healing-combo-01.png?v=1709812543&width=400"
         ],
         variants: [
             { id: "combo", name: { en: "Full Combo", fr: "Combo Complet" }, price: 189, sku: "SHESHA-PAIN-COMBO", stock: 30 }
@@ -137,7 +149,7 @@ async function upload() {
     console.log("🚀 Starting authenticated upload...");
 
     try {
-        await signInWithEmailAndPassword(auth, "contact@sutravedic.fr", "Admin@2026");
+        await signInWithEmailAndPassword(auth, "admin@sutravedic.com", "Admin@2026");
         console.log("🔓 Authenticated as admin.");
     } catch (err) {
         console.error("❌ Auth failed:", err.message);

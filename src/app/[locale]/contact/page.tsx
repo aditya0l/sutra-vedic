@@ -30,9 +30,8 @@ export default function ContactPage() {
                     {/* Contact Info */}
                     <div className="lg:col-span-5 space-y-8">
                         {[
-                            { icon: MapPin, title: isFr ? 'Adresse' : 'Address', value: '123 Rue de la Nature\n75001 Paris, France' },
+                            { icon: MapPin, title: isFr ? 'Adresse' : 'Address', value: '5 Rue Muller\n75018 Paris, France' },
                             { icon: Mail, title: 'Email', value: 'contact@sutravedic.fr' },
-                            { icon: Phone, title: isFr ? 'Téléphone' : 'Phone', value: '+33 1 23 45 67 89' },
                             { icon: Clock, title: isFr ? 'Horaires' : 'Hours', value: isFr ? 'Lun-Ven: 9h-18h\nSam: 10h-14h' : 'Mon-Fri: 9am-6pm\nSat: 10am-2pm' },
                         ].map(({ icon: Icon, title, value }) => (
                             <div key={title} className="flex gap-6 p-8 bg-white rounded-[2rem] shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)] border border-cream-dark/20 text-left">

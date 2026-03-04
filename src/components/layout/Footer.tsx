@@ -97,10 +97,6 @@ export default function Footer() {
                                 <Mail className="w-3.5 h-3.5 text-white/25 shrink-0" />
                                 contact@sutravedic.fr
                             </p>
-                            <p className="flex items-center gap-2.5 text-[0.8rem] text-white/40">
-                                <Phone className="w-3.5 h-3.5 text-white/25 shrink-0" />
-                                +33 1 23 45 67 89
-                            </p>
                         </div>
                     </div>
                 </div>
