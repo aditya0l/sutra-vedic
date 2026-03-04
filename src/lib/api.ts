@@ -234,9 +234,14 @@ export const ordersApi = {
             totalAmount,
             status: 'PENDING',
             createdAt: new Date().toISOString(),
-        }
+        };
 
-        const docRef = await addDoc(collection(db, 'orders'), newOrder);
+        // Firestore crashes if attributes are explicitly `undefined`
+        const cleanOrder = Object.fromEntries(
+            Object.entries(newOrder).filter(([_, v]) => v !== undefined)
+        );
+
+        const docRef = await addDoc(collection(db, 'orders'), cleanOrder);
 
         return {
             id: docRef.id,

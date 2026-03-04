@@ -35,7 +35,7 @@ function CheckoutContent() {
 
     const [form, setForm] = useState({
         firstName: '', lastName: '',
-        phone: '', address: '', city: '',
+        email: '', phone: '', address: '', city: '',
         state: '', zipCode: '', country: 'France',
     });
 
