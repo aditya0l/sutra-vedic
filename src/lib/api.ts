@@ -242,6 +242,7 @@ export const ordersApi = {
 
         const newOrder = {
             userId: user?.uid || null,
+            userEmail: user?.email || null, // Firebase account email (separate from shipping form email)
             guestName: payload.guestName || payload.shippingAddress.firstName + ' ' + payload.shippingAddress.lastName,
             email: payload.email,
             shippingAddress: payload.shippingAddress,
@@ -281,12 +282,17 @@ export const ordersApi = {
         const user = firebaseAuth.currentUser;
         if (!user) throw new Error("Must be logged in to view orders");
 
-        // Query by userId (works for logged-in checkout)
+        // Query by userId
         const byUserId = await getDocs(
             query(collection(db, 'orders'), where('userId', '==', user.uid))
         );
 
-        // Also query by email in case the order was placed with a form email that matches
+        // Query by Firebase account email (userEmail field - for logged-in users who typed different email)
+        const byUserEmail = user.email ? await getDocs(
+            query(collection(db, 'orders'), where('userEmail', '==', user.email))
+        ) : { docs: [] as any[] };
+
+        // Query by form email (for guest orders that used same email as account)
         const byEmail = user.email ? await getDocs(
             query(collection(db, 'orders'), where('email', '==', user.email))
         ) : { docs: [] as any[] };
@@ -294,7 +300,7 @@ export const ordersApi = {
         // Merge and deduplicate by document ID
         const seen = new Set<string>();
         const allOrders: Order[] = [];
-        for (const d of [...byUserId.docs, ...byEmail.docs]) {
+        for (const d of [...byUserId.docs, ...byUserEmail.docs, ...byEmail.docs]) {
             if (!seen.has(d.id)) {
                 seen.add(d.id);
                 allOrders.push({ id: d.id, ...d.data() } as unknown as Order);
