@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
     const [email, setEmail] = useState('contact@sutravedic.fr');
@@ -10,18 +10,38 @@ export default function LoginPage({ onLogin }: { onLogin: (token: string) => voi
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const [isInitializing, setIsInitializing] = useState(false);
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError('');
         setLoading(true);
         try {
+            if (isInitializing) {
+                // Create the admin user
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const token = await userCredential.user.getIdToken();
+                onLogin(token);
+                return;
+            }
+
+            // Normal login
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            const token = await user.getIdToken();
+            const token = await userCredential.user.getIdToken();
             onLogin(token);
         } catch (err: any) {
             console.error("Login error:", err);
-            // Provide more detail if available in the error object (e.g. Firebase error code)
+
+            // If it's the admin email and it failed because it doesn't exist (invalid-credential is used generically now)
+            if (email.toLowerCase() === 'contact@sutravedic.fr' && !isInitializing) {
+                if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-login-credentials') {
+                    setIsInitializing(true);
+                    setError("Admin account not found. Please click 'Initialize Admin Account' below to create it with this password.");
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const msg = err.code || err.message || 'Server unreachable. Make sure the backend is running.';
             setError(`Error: ${msg}`);
         } finally {
@@ -74,17 +94,17 @@ export default function LoginPage({ onLogin }: { onLogin: (token: string) => voi
                     <button
                         type="submit" disabled={loading}
                         style={{
-                            width: '100%', padding: '13px', background: loading ? '#9ca3af' : '#0F2E22',
-                            color: '#fff', border: 'none', borderRadius: 8, fontSize: 15,
+                            width: '100%', padding: '13px', background: loading ? '#9ca3af' : (isInitializing ? '#C9A84C' : '#0F2E22'),
+                            color: isInitializing ? '#0F2E22' : '#fff', border: 'none', borderRadius: 8, fontSize: 15,
                             fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.03em',
                         }}
                     >
-                        {loading ? 'Signing in…' : 'Sign In'}
+                        {loading ? 'Processing…' : (isInitializing ? 'Initialize Admin Account' : 'Sign In')}
                     </button>
                 </form>
 
                 <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', marginTop: 24 }}>
-                    Default: contact@sutravedic.fr / Admin@2026
+                    Admin Access Only
                 </p>
             </div>
         </div>
