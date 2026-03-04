@@ -2,16 +2,37 @@
 
 import { useState } from 'react';
 import { useLocale } from 'next-intl';
-import { Mail, Phone, MapPin, Send, Clock, CheckCircle } from 'lucide-react';
+import { Mail, MapPin, Send, Clock, CheckCircle, Loader2 } from 'lucide-react';
 
 export default function ContactPage() {
     const locale = useLocale();
     const isFr = locale === 'fr';
-    const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+        setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSubmitted(true);
+        setIsSubmitting(true);
+        setError('');
+        try {
+            const res = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...form, locale }),
+            });
+            if (!res.ok) throw new Error('Failed');
+            setIsSubmitted(true);
+        } catch {
+            setError(isFr ? 'Échec de l\'envoi. Veuillez réessayer.' : 'Failed to send. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -21,7 +42,7 @@ export default function ContactPage() {
                     {isFr ? 'Contactez-nous' : 'Contact Us'}
                 </h1>
                 <p className="text-lg text-charcoal-light max-w-xl mx-auto font-light leading-relaxed">
-                    {isFr ? 'Une question ? Nous sommes là pour vous aider.' : 'Have a question? We\'re here to help.'}
+                    {isFr ? 'Une question ? Nous sommes là pour vous aider.' : "Have a question? We're here to help."}
                 </p>
             </div>
 
@@ -49,7 +70,7 @@ export default function ContactPage() {
                     {/* Contact Form */}
                     <div className="lg:col-span-7">
                         {isSubmitted ? (
-                            <div className="bg-white rounded-3xl p-12 shadow-sm border border-cream-dark/10 text-center animate-scale-in">
+                            <div className="bg-white rounded-3xl p-12 shadow-sm border border-cream-dark/10 text-center">
                                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                                 <h2 className="text-2xl font-serif font-bold text-forest-dark mb-2">
                                     {isFr ? 'Message Envoyé !' : 'Message Sent!'}
@@ -66,23 +87,26 @@ export default function ContactPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-left">
                                     <div>
                                         <label className="block text-[0.8rem] font-medium tracking-wide uppercase text-charcoal-light mb-3">{isFr ? 'Nom' : 'Name'}</label>
-                                        <input required className="w-full px-6 py-4 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow" />
+                                        <input name="name" value={form.name} onChange={handleChange} required className="w-full px-6 py-4 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow" />
                                     </div>
                                     <div>
                                         <label className="block text-[0.8rem] font-medium tracking-wide uppercase text-charcoal-light mb-3">Email</label>
-                                        <input type="email" required className="w-full px-6 py-4 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow" />
+                                        <input name="email" type="email" value={form.email} onChange={handleChange} required className="w-full px-6 py-4 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow" />
                                     </div>
                                 </div>
                                 <div className="mb-8 text-left">
                                     <label className="block text-[0.8rem] font-medium tracking-wide uppercase text-charcoal-light mb-3">{isFr ? 'Sujet' : 'Subject'}</label>
-                                    <input required className="w-full px-6 py-4 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow" />
+                                    <input name="subject" value={form.subject} onChange={handleChange} required className="w-full px-6 py-4 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow" />
                                 </div>
                                 <div className="mb-12 text-left">
                                     <label className="block text-[0.8rem] font-medium tracking-wide uppercase text-charcoal-light mb-3">Message</label>
-                                    <textarea rows={6} required className="w-full px-6 py-5 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow resize-none" />
+                                    <textarea name="message" rows={6} value={form.message} onChange={handleChange} required className="w-full px-6 py-5 bg-[#FEFAE0]/30 border border-cream-dark/30 rounded-2xl text-[0.9375rem] focus:outline-none focus:ring-1 focus:ring-gold/50 transition-shadow resize-none" />
                                 </div>
-                                <button type="submit" className="px-[3.5rem] py-5 bg-[#0F2E22] hover:bg-[#1B4332] text-white font-medium rounded-full transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-[#0F2E22]/15 hover:-translate-y-0.5 inline-flex items-center justify-center text-center gap-4 text-[0.95rem] tracking-wide mx-auto w-auto">
-                                    <Send className="w-4 h-4 opacity-80 shrink-0" />
+
+                                {error && <p className="text-red-500 text-sm mb-6">{error}</p>}
+
+                                <button type="submit" disabled={isSubmitting} className="px-[3.5rem] py-5 bg-[#0F2E22] hover:bg-[#1B4332] disabled:opacity-60 text-white font-medium rounded-full transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 inline-flex items-center justify-center gap-4 text-[0.95rem] tracking-wide mx-auto">
+                                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 opacity-80 shrink-0" />}
                                     <span>{isFr ? 'Envoyer' : 'Send Message'}</span>
                                 </button>
                             </form>

@@ -31,7 +31,7 @@ export default function ProductsTab({ token }: { token: string }) {
     const [editing, setEditing] = useState<any>(null);
     const [form, setForm] = useState({
         nameFr: '', nameEn: '', shortFr: '', shortEn: '',
-        price: '', compareAtPrice: '', sku: '', categoryId: '', imageUrl: '',
+        price: '', compareAtPrice: '', discountPct: '', sku: '', categoryId: '', imageUrl: '',
         stock: '', isNew: false, isBestseller: false, isActive: true,
     });
     const [saving, setSaving] = useState(false);
@@ -57,7 +57,7 @@ export default function ProductsTab({ token }: { token: string }) {
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
     function blankForm() {
-        return { nameFr: '', nameEn: '', shortFr: '', shortEn: '', price: '', compareAtPrice: '', sku: '', categoryId: categories[0]?.id || '', imageUrl: '', stock: '', isNew: false, isBestseller: false, isActive: true };
+        return { nameFr: '', nameEn: '', shortFr: '', shortEn: '', price: '', compareAtPrice: '', discountPct: '', sku: '', categoryId: categories[0]?.id || '', imageUrl: '', stock: '', isNew: false, isBestseller: false, isActive: true };
     }
 
     function openCreate() { setEditing(null); setForm(blankForm()); setMsg(null); setShowForm(true); }
@@ -67,9 +67,13 @@ export default function ProductsTab({ token }: { token: string }) {
         setForm({
             nameFr: p.name?.fr || '', nameEn: p.name?.en || '',
             shortFr: p.shortDescription?.fr || '', shortEn: p.shortDescription?.en || '',
-            price: String(p.price), compareAtPrice: String(p.compareAtPrice || ''), sku: p.sku, categoryId: p.categoryId || categories[0]?.id || '',
+            price: String(p.price), compareAtPrice: String(p.compareAtPrice || ''),
+            discountPct: p.compareAtPrice && p.compareAtPrice > p.price
+                ? String(Math.round((1 - p.price / p.compareAtPrice) * 100))
+                : '',
+            sku: p.sku, categoryId: p.categoryId || categories[0]?.id || '',
             imageUrl: p.images?.[0] || '',
-            stock: String(p.stock ?? 0), isNew: p.isNew, isBestseller: p.isBestseller, isActive: p.isActive,
+            stock: String(p.stock ?? 0), isNew: p.isNew ?? false, isBestseller: p.isBestseller ?? false, isActive: p.isActive ?? true,
         });
         setMsg(null);
         setShowForm(true);
@@ -86,9 +90,9 @@ export default function ProductsTab({ token }: { token: string }) {
             categoryId: form.categoryId,
             stock: parseInt(form.stock || '0'),
             images: form.imageUrl ? [form.imageUrl] : [],
-            isNew: form.isNew,
-            isBestseller: form.isBestseller,
-            isActive: form.isActive,
+            isNew: form.isNew ?? false,
+            isBestseller: form.isBestseller ?? false,
+            isActive: form.isActive ?? true,
             ...(!editing ? { sku: form.sku, slug: form.nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || form.sku } : {}),
             updatedAt: new Date().toISOString(),
         };
@@ -197,11 +201,41 @@ export default function ProductsTab({ token }: { token: string }) {
                         </div>
                         <div>
                             <Label>Price (€)</Label>
-                            <input style={inp()} type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
+                            <input style={inp()} type="number" step="0.01" value={form.price} onChange={e => {
+                                const price = e.target.value;
+                                setForm(f => {
+                                    // recalculate compareAtPrice from discountPct if set
+                                    const pct = parseFloat(f.discountPct);
+                                    const compareAt = price && pct > 0
+                                        ? String((parseFloat(price) / (1 - pct / 100)).toFixed(2))
+                                        : f.compareAtPrice;
+                                    return { ...f, price, compareAtPrice: compareAt };
+                                });
+                            }} />
                         </div>
                         <div>
-                            <Label>Compare At Price (€) - (Original Price for Discount Display)</Label>
-                            <input style={inp()} type="number" step="0.01" placeholder="e.g. 250.00" value={form.compareAtPrice} onChange={e => setForm(f => ({ ...f, compareAtPrice: e.target.value }))} />
+                            <Label>Discount % (auto-calculates Compare At Price)</Label>
+                            <input style={inp()} type="number" min="0" max="99" step="1" placeholder="e.g. 20" value={form.discountPct} onChange={e => {
+                                const pct = e.target.value;
+                                setForm(f => {
+                                    const compareAt = f.price && parseFloat(pct) > 0
+                                        ? String((parseFloat(f.price) / (1 - parseFloat(pct) / 100)).toFixed(2))
+                                        : f.compareAtPrice;
+                                    return { ...f, discountPct: pct, compareAtPrice: compareAt };
+                                });
+                            }} />
+                        </div>
+                        <div>
+                            <Label>Compare At Price (€) — original price shown crossed out</Label>
+                            <input style={inp()} type="number" step="0.01" placeholder="e.g. 250.00" value={form.compareAtPrice} onChange={e => {
+                                const compareAt = e.target.value;
+                                setForm(f => {
+                                    const pct = f.price && parseFloat(compareAt) > parseFloat(f.price)
+                                        ? String(Math.round((1 - parseFloat(f.price) / parseFloat(compareAt)) * 100))
+                                        : f.discountPct;
+                                    return { ...f, compareAtPrice: compareAt, discountPct: pct };
+                                });
+                            }} />
                         </div>
                         <div>
                             <Label>Stock Quantity</Label>

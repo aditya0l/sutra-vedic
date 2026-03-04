@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer';
 // WhatsApp Button removed
 import CookieBanner from '@/components/layout/CookieBanner';
 import { CartProvider } from '@/lib/cart-context';
+import { WishlistProvider } from '@/lib/wishlist-context';
 
 type Props = {
     children: React.ReactNode;
@@ -61,12 +62,14 @@ export default async function LocaleLayout({ children, params }: Props) {
             <body className="min-h-screen flex flex-col">
                 <NextIntlClientProvider messages={messages}>
                     <CartProvider>
-                        <Header />
-                        <main className="flex-1" style={{ paddingTop: '144px' }}>
-                            {children}
-                        </main>
-                        <Footer />
-                        <CookieBanner />
+                        <WishlistProvider>
+                            <Header />
+                            <main className="flex-1" style={{ paddingTop: '144px' }}>
+                                {children}
+                            </main>
+                            <Footer />
+                            <CookieBanner />
+                        </WishlistProvider>
                     </CartProvider>
                 </NextIntlClientProvider>
             </body>

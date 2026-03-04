@@ -9,7 +9,7 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 export default function CartPage() {
     const t = useTranslations('cart');
     const locale = useLocale();
-    const { items, updateQuantity, removeItem, getSubtotal, getTax, getTotal } = useCart();
+    const { items, updateQuantity, removeItem, getSubtotal, getTax, getShipping, getTotal, storeSettings } = useCart();
 
     if (items.length === 0) {
         return (
@@ -48,8 +48,16 @@ export default function CartPage() {
                             const price = variant ? variant.price : item.product.price;
                             return (
                                 <div key={`${item.product.id}-${item.variantId}`} className="bg-white rounded-[2rem] p-6 md:p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] border border-cream-dark/20 flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left transition-all hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)]">
-                                    <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 flex items-center justify-center shrink-0 border border-cream-dark/10">
-                                        <span className="text-5xl opacity-80">🌿</span>
+                                    <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 flex items-center justify-center shrink-0 border border-cream-dark/10 overflow-hidden">
+                                        {item.product.images?.[0] ? (
+                                            <img
+                                                src={item.product.images[0]}
+                                                alt={getLocalizedValue(item.product.name, locale)}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-5xl opacity-80">🌿</span>
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start w-full">
                                         <Link href={{ pathname: '/produit/[slug]', params: { slug: item.product.slug } }} className="font-serif font-normal text-xl text-forest-dark hover:text-gold transition-colors line-clamp-1 tracking-wide">
@@ -102,10 +110,13 @@ export default function CartPage() {
                                 </div>
                                 <div className="flex justify-between text-[0.9375rem]">
                                     <span className="text-charcoal-light">{t('shipping')}</span>
-                                    <span className="font-medium tracking-wide text-[#0F2E22] bg-[#C9A84C]/20 px-2.5 py-0.5 rounded-full text-xs uppercase">{t('shippingFree')}</span>
+                                    {getShipping() === 0
+                                        ? <span className="font-medium tracking-wide text-[#0F2E22] bg-[#C9A84C]/20 px-2.5 py-0.5 rounded-full text-xs uppercase">{t('shippingFree')}</span>
+                                        : <span className="font-medium text-forest-dark">{formatPrice(getShipping())}</span>
+                                    }
                                 </div>
                                 <div className="flex justify-between text-[0.9375rem]">
-                                    <span className="text-charcoal-light">{t('tax')} (20%)</span>
+                                    <span className="text-charcoal-light">{t('tax')} ({storeSettings.taxRate}%)</span>
                                     <span className="font-medium text-forest-dark">{formatPrice(getTax())}</span>
                                 </div>
                             </div>

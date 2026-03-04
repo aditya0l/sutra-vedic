@@ -2,9 +2,20 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { Product, CartItem } from '@/types';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+interface StoreSettings {
+    taxRate: number;          // percentage, e.g. 20
+    shippingFee: number;      // in €
+    freeShippingThreshold: number; // orders above this get free shipping
+}
+
+const DEFAULT_SETTINGS: StoreSettings = { taxRate: 20, shippingFee: 0, freeShippingThreshold: 100 };
 
 interface CartContextType {
     items: CartItem[];
+    storeSettings: StoreSettings;
     addItem: (product: Product, quantity?: number, variantId?: string) => void;
     removeItem: (productId: string, variantId?: string) => void;
     updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
@@ -12,6 +23,7 @@ interface CartContextType {
     getItemCount: () => number;
     getSubtotal: () => number;
     getTax: () => number;
+    getShipping: () => number;
     getTotal: () => number;
 }
 
@@ -19,18 +31,17 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([]);
+    const [storeSettings, setStoreSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
 
+    // Load cart from localStorage
     useEffect(() => {
         const savedCart = localStorage.getItem('sutravedic-cart');
         if (savedCart) {
-            try {
-                setItems(JSON.parse(savedCart));
-            } catch {
-                localStorage.removeItem('sutravedic-cart');
-            }
+            try { setItems(JSON.parse(savedCart)); } catch { localStorage.removeItem('sutravedic-cart'); }
         }
     }, []);
 
+    // Persist cart to localStorage
     useEffect(() => {
         if (items.length > 0) {
             localStorage.setItem('sutravedic-cart', JSON.stringify(items));
@@ -38,6 +49,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem('sutravedic-cart');
         }
     }, [items]);
+
+    // Load store settings from Firestore
+    useEffect(() => {
+        getDoc(doc(db, 'settings', 'storeSettings'))
+            .then(snap => {
+                if (snap.exists()) {
+                    setStoreSettings({ ...DEFAULT_SETTINGS, ...snap.data() } as StoreSettings);
+                }
+            })
+            .catch(() => { }); // graceful fallback to defaults
+    }, []);
 
     const addItem = useCallback((product: Product, quantity = 1, variantId?: string) => {
         setItems(prev => {
@@ -58,10 +80,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const updateQuantity = useCallback((productId: string, quantity: number, variantId?: string) => {
-        if (quantity <= 0) {
-            removeItem(productId, variantId);
-            return;
-        }
+        if (quantity <= 0) { removeItem(productId, variantId); return; }
         setItems(prev =>
             prev.map(item =>
                 item.product.id === productId && item.variantId === variantId
@@ -71,13 +90,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
     }, [removeItem]);
 
-    const clearCart = useCallback(() => {
-        setItems([]);
-    }, []);
+    const clearCart = useCallback(() => setItems([]), []);
 
-    const getItemCount = useCallback(() => {
-        return items.reduce((total, item) => total + item.quantity, 0);
-    }, [items]);
+    const getItemCount = useCallback(() => items.reduce((t, i) => t + i.quantity, 0), [items]);
 
     const getSubtotal = useCallback(() => {
         return items.reduce((total, item) => {
@@ -90,17 +105,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [items]);
 
     const getTax = useCallback(() => {
-        return getSubtotal() * 0.20; // 20% TVA
-    }, [getSubtotal]);
+        return getSubtotal() * (storeSettings.taxRate / 100);
+    }, [getSubtotal, storeSettings.taxRate]);
+
+    const getShipping = useCallback(() => {
+        const subtotal = getSubtotal();
+        if (storeSettings.shippingFee === 0) return 0; // always free
+        if (storeSettings.freeShippingThreshold > 0 && subtotal >= storeSettings.freeShippingThreshold) return 0;
+        return storeSettings.shippingFee;
+    }, [getSubtotal, storeSettings]);
 
     const getTotal = useCallback(() => {
-        return getSubtotal() + getTax();
-    }, [getSubtotal, getTax]);
+        return getSubtotal() + getTax() + getShipping();
+    }, [getSubtotal, getTax, getShipping]);
 
     return (
         <CartContext.Provider value={{
-            items, addItem, removeItem, updateQuantity, clearCart,
-            getItemCount, getSubtotal, getTax, getTotal
+            items, storeSettings, addItem, removeItem, updateQuantity, clearCart,
+            getItemCount, getSubtotal, getTax, getShipping, getTotal
         }}>
             {children}
         </CartContext.Provider>

@@ -18,7 +18,7 @@ function CheckoutContent() {
     const t = useTranslations('checkout');
     const locale = useLocale();
     const router = useRouter();
-    const { items, getSubtotal, getTax, getTotal, clearCart } = useCart();
+    const { items, getSubtotal, getTax, getShipping, getTotal, storeSettings, clearCart } = useCart();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isComplete, setIsComplete] = useState(false);
     const [orderId, setOrderId] = useState('');
@@ -26,6 +26,9 @@ function CheckoutContent() {
     const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
     const [error, setError] = useState('');
     const [copied, setCopied] = useState('');
+    const [paymentRef, setPaymentRef] = useState('');
+    const [refSubmitted, setRefSubmitted] = useState(false);
+    const [refSubmitting, setRefSubmitting] = useState(false);
 
     useEffect(() => {
         if (!auth.isLoggedIn()) {
@@ -111,10 +114,40 @@ function CheckoutContent() {
 
     const ref = orderId.slice(0, 8).toUpperCase();
 
+    // ─── Submit payment reference ──────────────────────────────────────────────
+    const submitPaymentRef = async () => {
+        if (!paymentRef.trim() || !orderId) return;
+        setRefSubmitting(true);
+        try {
+            const { updateDoc, doc: fsDoc } = await import('firebase/firestore');
+            await updateDoc(fsDoc(db, 'orders', orderId), {
+                paymentReference: paymentRef,
+                updatedAt: new Date().toISOString()
+            });
+            fetch('/api/email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'PAYMENT_SUBMITTED',
+                    order: { id: orderId, totalAmount: orderTotal },
+                    locale,
+                    customerEmail: form.email,
+                    customerName: `${form.firstName} ${form.lastName}`,
+                    extra: { paymentReference: paymentRef }
+                })
+            }).catch(console.error);
+            setRefSubmitted(true);
+        } catch (e) {
+            console.error('Failed to save ref:', e);
+        } finally {
+            setRefSubmitting(false);
+        }
+    };
+
     // ─── Success screen: bank transfer instructions ─────────────────────────────
     if (isComplete && bankInfo) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center px-4">
+            <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12">
                 <div className="max-w-lg w-full">
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 bg-[#0F2E22] rounded-full flex items-center justify-center mx-auto mb-6">
@@ -124,8 +157,8 @@ function CheckoutContent() {
                         <p className="text-gray-500 text-sm">Reference: <strong className="text-[#0F2E22]">SUTRAVEDIC-{ref}</strong></p>
                     </div>
 
-                    {/* Bank transfer info card */}
-                    <div className="bg-[#FEFAE0] border border-[#E8D8A0] rounded-2xl p-6 mb-6">
+                    {/* Bank transfer info card - white background */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-5 shadow-sm">
                         <div className="flex items-center gap-3 mb-5">
                             <Building2 className="w-5 h-5 text-[#C9A84C]" />
                             <h2 className="font-semibold text-[#0F2E22]">
@@ -141,13 +174,12 @@ function CheckoutContent() {
                         <div className="space-y-3">
                             {[
                                 { label: locale === 'fr' ? 'Bénéficiaire' : 'Account Holder', value: bankInfo.accountHolder },
-                                { label: locale === 'fr' ? 'Banque' : 'Bank', value: bankInfo.bankName },
                                 { label: 'IBAN', value: bankInfo.iban, mono: true, copyKey: 'iban' },
                                 { label: 'BIC / SWIFT', value: bankInfo.bic, mono: true, copyKey: 'bic' },
                                 { label: locale === 'fr' ? 'Montant exact' : 'Exact Amount', value: `€${orderTotal.toFixed(2)}`, highlight: true, copyKey: 'amount' },
                                 { label: locale === 'fr' ? 'Référence' : 'Reference', value: `SUTRAVEDIC-${ref}`, mono: true, copyKey: 'ref' },
                             ].map(row => (
-                                <div key={row.label} className="flex items-center justify-between py-2 border-b border-[#E8D8A0] last:border-0">
+                                <div key={row.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                                     <span className="text-xs text-gray-500 w-32 shrink-0">{row.label}</span>
                                     <span className={`flex-1 font-semibold text-sm text-right ${row.mono ? 'font-mono' : ''} ${row.highlight ? 'text-[#C9A84C] text-base' : 'text-[#0F2E22]'}`}>
                                         {row.value}
@@ -162,7 +194,45 @@ function CheckoutContent() {
                         </div>
 
                         {bankInfo.instructions && (
-                            <p className="text-xs text-gray-500 italic mt-4 pt-4 border-t border-[#E8D8A0]">{bankInfo.instructions}</p>
+                            <p className="text-xs text-gray-500 italic mt-4 pt-4 border-t border-gray-100">{bankInfo.instructions}</p>
+                        )}
+                    </div>
+
+                    {/* Required payment reference submission */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-5">
+                        <h3 className="font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            {locale === 'fr' ? 'Confirmez votre virement' : 'Confirm Your Transfer'}
+                        </h3>
+                        <p className="text-sm text-amber-700 mb-4">
+                            {locale === 'fr'
+                                ? 'Après avoir effectué votre virement, entrez la référence de transaction ci-dessous pour accélérer la validation de votre commande.'
+                                : 'After completing your bank transfer, enter your transaction reference below to speed up order verification.'}
+                        </p>
+                        {refSubmitted ? (
+                            <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                                <Check className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                    {locale === 'fr' ? 'Référence soumise ! Nous vérifierons votre paiement sous 1–2 jours ouvrés.' : 'Reference submitted! We will verify your payment within 1–2 business days.'}
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="flex gap-3">
+                                <input
+                                    type="text"
+                                    value={paymentRef}
+                                    onChange={e => setPaymentRef(e.target.value)}
+                                    placeholder={locale === 'fr' ? 'Référence de transaction bancaire' : 'Bank transaction reference / ID'}
+                                    className="flex-1 px-4 py-3 rounded-xl border border-amber-300 bg-white focus:outline-none focus:border-amber-500 text-sm"
+                                />
+                                <button
+                                    onClick={submitPaymentRef}
+                                    disabled={!paymentRef.trim() || refSubmitting}
+                                    className="px-5 py-3 bg-[#0F2E22] text-white text-sm font-medium rounded-xl disabled:opacity-40 hover:bg-[#1B4332] transition-colors whitespace-nowrap"
+                                >
+                                    {refSubmitting ? '…' : (locale === 'fr' ? 'Soumettre' : 'Submit')}
+                                </button>
+                            </div>
                         )}
                     </div>
 
@@ -241,10 +311,16 @@ function CheckoutContent() {
                                 </div>
                             )}
 
-                            <button type="submit" disabled={isProcessing} className={`w-full py-5 rounded-xl font-medium text-[0.95rem] tracking-wide transition-all duration-300 shadow-lg flex items-center justify-center gap-3 ${isProcessing ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#0F2E22] text-white hover:bg-[#1a4a35] hover:shadow-xl hover:-translate-y-0.5'}`}>
-                                <Lock className="w-4 h-4" />
-                                {isProcessing ? (locale === 'fr' ? 'Traitement…' : 'Processing…') : (locale === 'fr' ? 'Confirmer la commande' : 'Place Order')}
-                            </button>
+                            <div className="mt-8 pb-16">
+                                <button type="submit" disabled={isProcessing} className={`w-full py-6 rounded-2xl font-semibold text-[1rem] tracking-widest uppercase transition-all duration-300 shadow-xl flex items-center justify-center gap-3 ${isProcessing ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#0F2E22] text-white hover:bg-[#1a4a35] hover:shadow-2xl hover:-translate-y-1'}`}>
+                                    <Lock className="w-4 h-4" />
+                                    {isProcessing ? (locale === 'fr' ? 'Traitement…' : 'Processing…') : (locale === 'fr' ? 'Confirmer la commande' : 'Place Order')}
+                                </button>
+                                <p className="text-center text-xs text-charcoal-light mt-3 flex items-center justify-center gap-1.5">
+                                    <Lock className="w-3 h-3" />
+                                    {locale === 'fr' ? 'Commande sécurisée · Aucun paiement immédiat' : 'Secure order · No payment charged now'}
+                                </p>
+                            </div>
                         </form>
 
                         {/* Right: Order summary */}
@@ -271,8 +347,8 @@ function CheckoutContent() {
                                 </div>
                                 <div className="space-y-3 pt-4 border-t border-cream-dark/20">
                                     <div className="flex justify-between text-sm"><span className="text-charcoal-light">{t('subtotal')}</span><span className="font-medium">{formatPrice(getSubtotal())}</span></div>
-                                    <div className="flex justify-between text-sm"><span className="text-charcoal-light">{t('shipping')}</span><span className="text-xs font-medium uppercase tracking-widest text-[#0F2E22] bg-[#C9A84C]/20 px-2.5 py-0.5 rounded-full">{t('shippingFree')}</span></div>
-                                    <div className="flex justify-between text-sm"><span className="text-charcoal-light">{t('tax')} (20%)</span><span className="font-medium">{formatPrice(getTax())}</span></div>
+                                    <div className="flex justify-between text-sm"><span className="text-charcoal-light">{t('shipping')}</span>{getShipping() === 0 ? <span className="text-xs font-medium uppercase tracking-widest text-[#0F2E22] bg-[#C9A84C]/20 px-2.5 py-0.5 rounded-full">{t('shippingFree')}</span> : <span className="font-medium">{formatPrice(getShipping())}</span>}</div>
+                                    <div className="flex justify-between text-sm"><span className="text-charcoal-light">{t('tax')} ({storeSettings.taxRate}%)</span><span className="font-medium">{formatPrice(getTax())}</span></div>
                                 </div>
                                 <div className="flex justify-between pt-4 mt-4 border-t border-cream-dark/20">
                                     <span className="font-serif text-xl text-forest-dark">{t('total')}</span>

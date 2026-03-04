@@ -4,6 +4,7 @@ import { useState, use, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useCart } from '@/lib/cart-context';
+import { useWishlist } from '@/lib/wishlist-context';
 import { productsApi } from '@/lib/api';
 import { getLocalizedValue, formatPrice } from '@/lib/utils';
 import {
@@ -17,6 +18,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
     const t = useTranslations('product');
     const locale = useLocale();
     const { addItem } = useCart();
+    const { toggle: toggleWishlist, isInWishlist } = useWishlist();
     const router = useRouter();
 
     const [product, setProduct] = useState<Product | null>(null);
@@ -178,17 +180,19 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                             {getLocalizedValue(product.name, locale)}
                         </h1>
 
-                        {/* Rating - Enhanced prominence */}
-                        <div className="flex items-center gap-6 mb-10 pb-8 border-b border-cream-dark/20 w-full justify-center lg:justify-start">
-                            <div className="flex items-center gap-1.5">
-                                {Array.from({ length: 5 }).map((_, idx) => (
-                                    <Star key={idx} className={`w-5 h-5 ${idx < Math.floor(product.rating) ? 'text-[#C9A84C] fill-[#C9A84C]' : 'text-gray-200'}`} />
-                                ))}
+                        {/* Rating - only shown when there are real reviews */}
+                        {reviews.length > 0 && (
+                            <div className="flex items-center gap-6 mb-10 pb-8 border-b border-cream-dark/20 w-full justify-center lg:justify-start">
+                                <div className="flex items-center gap-1.5">
+                                    {Array.from({ length: 5 }).map((_, idx) => (
+                                        <Star key={idx} className={`w-5 h-5 ${idx < Math.floor(product.rating) ? 'text-[#C9A84C] fill-[#C9A84C]' : 'text-gray-200'}`} />
+                                    ))}
+                                </div>
+                                <span className="text-lg font-semibold text-[#0F2E22]">
+                                    {product.rating} <span className="text-[#0F2E22]/50 ml-2 font-light">({reviews.length} {locale === 'fr' ? 'avis vérifiés' : 'verified reviews'})</span>
+                                </span>
                             </div>
-                            <span className="text-lg font-semibold text-[#0F2E22]">
-                                {product.rating} <span className="text-[#0F2E22]/50 ml-2 font-light">({product.reviewCount} {locale === 'fr' ? 'avis vérifiés' : 'verified reviews'})</span>
-                            </span>
-                        </div>
+                        )}
 
                         {/* Price */}
                         <div className="flex flex-col mb-8 text-center lg:text-left">
@@ -263,8 +267,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                             >
                                 {addedToCart ? (<><Check className="w-5 h-5 shrink-0" /><span>{locale === 'fr' ? 'Ajouté !' : 'Added!'}</span></>) : (<><ShoppingBag className="w-5 h-5 shrink-0" /><span>{t('addToCart')}</span></>)}
                             </button>
-                            <button className="w-12 h-12 flex items-center justify-center rounded-xl border border-cream-dark/20 hover:bg-cream hover:border-gold transition-colors bg-white">
-                                <Heart className="w-5 h-5 text-charcoal-light" />
+                            <button
+                                onClick={() => product && toggleWishlist(product.id)}
+                                className={`w-12 h-12 flex items-center justify-center rounded-xl border transition-colors bg-white ${product && isInWishlist(product.id)
+                                    ? 'border-red-300 text-red-500 bg-red-50'
+                                    : 'border-cream-dark/20 text-charcoal-light hover:bg-cream hover:border-gold'
+                                    }`}
+                                title={product && isInWishlist(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                            >
+                                <Heart className={`w-5 h-5 ${product && isInWishlist(product.id) ? 'fill-red-400 text-red-400' : ''}`} />
                             </button>
                         </div>
 
@@ -281,7 +292,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-2xl border border-cream-dark/10">
                             {[
                                 { icon: Truck, label: locale === 'fr' ? 'Livraison Gratuite' : 'Free Shipping' },
-                                { icon: RotateCcw, label: locale === 'fr' ? 'Retour 30 jours' : '30-Day Returns' },
+                                { icon: RotateCcw, label: locale === 'fr' ? 'Retour 14 jours' : '14-Day Returns' },
                                 { icon: ShieldCheck, label: locale === 'fr' ? 'Paiement Sécurisé' : 'Secure Payment' },
                             ].map(({ icon: Icon, label }) => (
                                 <div key={label} className="flex flex-col items-center text-center gap-1.5">

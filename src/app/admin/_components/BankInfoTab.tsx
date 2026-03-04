@@ -3,10 +3,42 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+// ⚠️ Field must be defined OUTSIDE the parent component to prevent re-mount on every
+// keystroke (which causes cursor to lose focus). Moving it outside fixes this.
+function Field({
+    label, name, value, onChange, placeholder, mono, required: req
+}: {
+    label: string;
+    name: string;
+    value: string;
+    onChange: (name: string, val: string) => void;
+    placeholder: string;
+    mono?: boolean;
+    required?: boolean;
+}) {
+    return (
+        <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{label}</label>
+            <input
+                type="text"
+                value={value}
+                onChange={e => onChange(name, e.target.value)}
+                placeholder={placeholder}
+                required={req}
+                style={{
+                    width: '100%', padding: '10px 14px',
+                    border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13,
+                    boxSizing: 'border-box', outline: 'none', background: '#fff',
+                    fontFamily: mono ? "'Courier New', monospace" : 'inherit',
+                    letterSpacing: mono ? '0.05em' : 'normal',
+                }}
+            />
+        </div>
+    );
+}
 
 export default function BankInfoTab({ token }: { token: string }) {
-    const [form, setForm] = useState({ accountHolder: '', bankName: '', iban: '', bic: '', instructions: '' });
+    const [form, setForm] = useState({ accountHolder: '', iban: '', bic: '', instructions: '' });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -18,7 +50,6 @@ export default function BankInfoTab({ token }: { token: string }) {
                     const data = snap.data();
                     setForm({
                         accountHolder: data.accountHolder || '',
-                        bankName: data.bankName || '',
                         iban: data.iban || '',
                         bic: data.bic || '',
                         instructions: data.instructions || ''
@@ -28,6 +59,8 @@ export default function BankInfoTab({ token }: { token: string }) {
             .catch(() => { })
             .finally(() => setLoading(false));
     }, [token]);
+
+    const handleChange = (name: string, val: string) => setForm(f => ({ ...f, [name]: val }));
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
@@ -45,26 +78,6 @@ export default function BankInfoTab({ token }: { token: string }) {
         }
     }
 
-    const Field = ({ label, name, type = 'text', placeholder, mono }: { label: string; name: keyof typeof form; type?: string; placeholder: string; mono?: boolean }) => (
-        <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{label}</label>
-            <input
-                type={type}
-                value={form[name]}
-                onChange={e => setForm(f => ({ ...f, [name]: e.target.value }))}
-                placeholder={placeholder}
-                required={name !== 'instructions'}
-                style={{
-                    width: '100%', padding: '10px 14px',
-                    border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13,
-                    boxSizing: 'border-box', outline: 'none', background: '#fff',
-                    fontFamily: mono ? "'Courier New', monospace" : 'inherit',
-                    letterSpacing: mono ? '0.05em' : 'normal',
-                }}
-            />
-        </div>
-    );
-
     return (
         <div style={{ padding: '36px', maxWidth: 720 }}>
             <div style={{ marginBottom: 32 }}>
@@ -80,13 +93,12 @@ export default function BankInfoTab({ token }: { token: string }) {
                     <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                         <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Account Information</div>
-                            <Field label="Account Holder Name" name="accountHolder" placeholder="Sutra Vedic SAS" />
-                            <Field label="Bank Name" name="bankName" placeholder="BNP Paribas" />
+                            <Field label="Account Holder Name" name="accountHolder" value={form.accountHolder} onChange={handleChange} placeholder="Sutra Vedic SAS" required />
                             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Transfer Codes</div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                    <Field label="IBAN" name="iban" placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX" mono />
-                                    <Field label="BIC / SWIFT Code" name="bic" placeholder="BNPAFRPP" mono />
+                                    <Field label="IBAN" name="iban" value={form.iban} onChange={handleChange} placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX" mono required />
+                                    <Field label="BIC / SWIFT Code" name="bic" value={form.bic} onChange={handleChange} placeholder="BNPAFRPP" mono required />
                                 </div>
                             </div>
                             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
@@ -96,7 +108,7 @@ export default function BankInfoTab({ token }: { token: string }) {
                                 <textarea
                                     rows={3}
                                     value={form.instructions}
-                                    onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
+                                    onChange={e => handleChange('instructions', e.target.value)}
                                     placeholder="Please include your order reference number in the transfer description."
                                     style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
                                 />
@@ -127,19 +139,18 @@ export default function BankInfoTab({ token }: { token: string }) {
                     <div>
                         <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: '24px', position: 'sticky', top: 24 }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>Customer Preview</div>
-                            <div style={{ background: '#fefae0', border: '1px solid #e8d8a0', borderRadius: 10, padding: '18px' }}>
+                            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '18px' }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: '#78716c', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                                     Bank Transfer Details
                                 </div>
                                 {[
                                     { label: 'Account Holder', value: form.accountHolder || '—' },
-                                    { label: 'Bank', value: form.bankName || '—' },
                                     { label: 'IBAN', value: form.iban || '—', mono: true },
                                     { label: 'BIC / SWIFT', value: form.bic || '—', mono: true },
                                     { label: 'Amount', value: '€XX.XX', highlight: true },
                                     { label: 'Reference', value: 'SUTRAVEDIC-XXXXXXXX', mono: true },
                                 ].map(row => (
-                                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(216,196,153,0.3)', fontSize: 12 }}>
+                                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #f1f5f9', fontSize: 12 }}>
                                         <span style={{ color: '#78716c', width: 110, flexShrink: 0 }}>{row.label}</span>
                                         <span style={{
                                             fontWeight: 600, textAlign: 'right',

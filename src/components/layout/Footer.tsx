@@ -16,8 +16,8 @@ export default function Footer() {
 
     const customerLinks = [
         { href: '/compte' as const, label: t('myAccount') },
-        { href: '/compte/commandes' as const, label: t('orderHistory') },
-        { href: '/compte/favoris' as const, label: t('wishlist') },
+        { href: '/compte' as const, label: t('orderHistory') },
+        { href: '/compte' as const, label: t('wishlist') },
     ];
 
     const legalLinks = [
@@ -76,7 +76,7 @@ export default function Footer() {
                         <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-white/70 mb-5">{t('customerService')}</h3>
                         <ul className="space-y-3">
                             {customerLinks.map(link => (
-                                <li key={link.href}>
+                                <li key={link.label}>
                                     <Link href={link.href} className="text-[0.8rem] text-white/40 hover:text-[#C9A84C] transition-colors">
                                         {link.label}
                                     </Link>

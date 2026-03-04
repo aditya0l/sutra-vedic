@@ -7,6 +7,8 @@ import { auth as firebaseAuth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { User, Order } from '@/types';
 import { User as UserIcon, Package, Heart, Settings, LogOut } from 'lucide-react';
+import { useWishlist } from '@/lib/wishlist-context';
+import { productsApi } from '@/lib/api';
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(price);
@@ -32,6 +34,8 @@ export default function AccountPage() {
     const [profileSaved, setProfileSaved] = useState(false);
     const [refInputs, setRefInputs] = useState<Record<string, string>>({});
     const [submittingRef, setSubmittingRef] = useState<string | null>(null);
+    const { items: wishlistIds, toggle: toggleWishlist } = useWishlist();
+    const [wishlistProducts, setWishlistProducts] = useState<any[]>([]);
 
     // Subscribe to Firebase auth state - persists across page refreshes correctly
     useEffect(() => {
@@ -55,7 +59,16 @@ export default function AccountPage() {
         return () => unsubscribe();
     }, []);
 
-    // Fetch orders when switching to orders tab
+    // Fetch wishlist products when switching to wishlist tab
+    useEffect(() => {
+        if (isLoggedIn && activeTab === 'wishlist' && wishlistIds.length > 0) {
+            productsApi.list({ limit: 100 })
+                .then(res => setWishlistProducts(res.data.filter((p: any) => wishlistIds.includes(p.id))))
+                .catch(() => setWishlistProducts([]));
+        } else if (activeTab === 'wishlist' && wishlistIds.length === 0) {
+            setWishlistProducts([]);
+        }
+    }, [isLoggedIn, activeTab, wishlistIds]);
     useEffect(() => {
         if (isLoggedIn && activeTab === 'orders') {
             ordersApi.list()
@@ -424,10 +437,36 @@ export default function AccountPage() {
                             {activeTab === 'wishlist' && (
                                 <div>
                                     <h2 className="font-serif font-normal text-3xl text-forest-dark mb-10 tracking-wide">{t('wishlist')}</h2>
-                                    <div className="py-12 border-2 border-dashed border-cream-dark/30 rounded-2xl flex flex-col items-center">
-                                        <Heart className="w-12 h-12 text-cream-dark mb-4" />
-                                        <p className="text-charcoal-light font-light text-lg">{locale === 'fr' ? 'Votre liste de favoris est vide.' : 'Your wishlist is empty.'}</p>
-                                    </div>
+                                    {wishlistProducts.length === 0 ? (
+                                        <div className="py-12 border-2 border-dashed border-cream-dark/30 rounded-2xl flex flex-col items-center gap-4">
+                                            <Heart className="w-12 h-12 text-cream-dark" />
+                                            <p className="text-charcoal-light font-light text-lg">{locale === 'fr' ? 'Votre liste de favoris est vide.' : 'Your wishlist is empty.'}</p>
+                                            <a href={`/${locale}/produits`} className="text-sm font-medium text-[#C9A84C] hover:underline">{locale === 'fr' ? 'Découvrir nos produits →' : 'Browse our products →'}</a>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            {wishlistProducts.map((product: any) => (
+                                                <div key={product.id} className="bg-white rounded-2xl border border-cream-dark/20 p-4 flex gap-4 items-center shadow-sm">
+                                                    <div className="w-16 h-16 rounded-xl bg-[#FEFAE0] overflow-hidden shrink-0">
+                                                        {product.images?.[0] ? (
+                                                            <img src={product.images[0]} alt={typeof product.name === 'object' ? product.name[locale] : product.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-2xl">🌿</div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <a href={`/${locale}/produit/${product.slug}`} className="font-serif text-forest-dark hover:text-[#C9A84C] transition-colors line-clamp-1">
+                                                            {typeof product.name === 'object' ? product.name[locale] : product.name}
+                                                        </a>
+                                                        <p className="text-sm text-[#C9A84C] font-medium mt-1">€{product.price?.toFixed(2)}</p>
+                                                    </div>
+                                                    <button onClick={() => toggleWishlist(product.id)} className="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Remove">
+                                                        <Heart className="w-4 h-4 fill-red-400" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

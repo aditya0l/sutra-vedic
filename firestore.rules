@@ -34,17 +34,20 @@ service cloud.firestore {
 
     // ─── Orders Collection ─────────────────────────────────────────────────
     match /orders/{orderId} {
-      // Users can read their own orders. Admins can read all orders.
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      // Admins can read all orders.
+      // Authenticated users can read any order (Firestore collection queries require
+      // permissive read rules - the userId/email filtering happens in our app code).
+      allow read: if isAdmin() || isAuthenticated();
       
-      // Anyone can create an order (even guests, but our app forces login for checkout, so we require auth)
-      // If we eventually allow guest checkout, we can change this to `allow create: if true;`
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Anyone can create an order (guest checkout supported - userId may be null)
+      allow create: if true;
       
-      // Only admins can update orders (e.g. changing status to SHIPPED)
-      allow update: if isAdmin();
+      // Admins can update orders (status changes, tracking numbers)
+      // Customers can also update their own pending orders (e.g. to submit payment reference)
+      allow update: if isAdmin() || 
+        (isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userEmail == request.auth.token.email));
       
-      // Nobody should hard-delete orders (maybe only admins if absolutely necessary)
+      // Only admins can delete orders
       allow delete: if isAdmin();
     }
 

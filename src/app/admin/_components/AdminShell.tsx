@@ -6,11 +6,12 @@ const IconMenu = () => (
 );
 
 export default function AdminShell({ token, onLogout }: { token: string; onLogout: () => void }) {
-    const [tab, setTab] = React.useState<'dashboard' | 'orders' | 'products' | 'bank-info'>('dashboard');
+    const [tab, setTab] = React.useState<'dashboard' | 'orders' | 'products' | 'bank-info' | 'store-settings'>('dashboard');
     const [DashboardTab] = React.useState(() => React.lazy(() => import('./DashboardTab')));
     const [OrdersTab] = React.useState(() => React.lazy(() => import('./OrdersTab')));
     const [ProductsTab] = React.useState(() => React.lazy(() => import('./ProductsTab')));
     const [BankInfoTab] = React.useState(() => React.lazy(() => import('./BankInfoTab')));
+    const [StoreSettingsTab] = React.useState(() => React.lazy(() => import('./StoreSettingsTab')));
 
     const NAV = [
         {
@@ -27,7 +28,11 @@ export default function AdminShell({ token, onLogout }: { token: string; onLogou
         },
         {
             id: 'bank-info', label: 'Bank Info',
-            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="1" y1="6" x2="23" y2="6" /><line x1="1" y1="12" x2="23" y2="12" /><path d="M1 6l3-3h16l3 3" /><rect x="1" y="12" width="22" height="8" /><line x1="6" y1="18" x2="8" y2="18" /><line x1="11" y1="18" x2="13" y2="18" /></svg>
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="1" y1="6" x2="23" y2="6" /><line x1="1" y1="12" x2="23" y2="12" /><path d="M1 6l3-3h16l3 3" /><rect x="1" y="12" width="22" height="8" /></svg>
+        },
+        {
+            id: 'store-settings', label: 'Store Settings',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
         },
     ] as const;
 
@@ -107,6 +112,7 @@ export default function AdminShell({ token, onLogout }: { token: string; onLogou
                     {tab === 'orders' && <OrdersTab token={token} />}
                     {tab === 'products' && <ProductsTab token={token} />}
                     {tab === 'bank-info' && <BankInfoTab token={token} />}
+                    {tab === 'store-settings' && <StoreSettingsTab token={token} />}
                 </React.Suspense>
             </main>
         </div>
