@@ -24,9 +24,11 @@ export default function AccountPage() {
     const [authLoading, setAuthLoading] = useState(false);
 
     const [user, setUser] = useState<User | null>(null);
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<any[]>([]);
     const [profileForm, setProfileForm] = useState({ name: '', email: '' });
     const [profileSaved, setProfileSaved] = useState(false);
+    const [refInputs, setRefInputs] = useState<Record<string, string>>({});
+    const [submittingRef, setSubmittingRef] = useState<string | null>(null);
 
     // Check if already logged in on mount
     useEffect(() => {
@@ -101,6 +103,49 @@ export default function AccountPage() {
             setTimeout(() => setProfileSaved(false), 2000);
         } catch {
             //silent
+        }
+    };
+
+    const submitPaymentReference = async (orderId: string) => {
+        const ref = refInputs[orderId];
+        if (!ref?.trim()) return;
+
+        setSubmittingRef(orderId);
+        try {
+            // Update Firestore directly for MVP
+            const { doc, updateDoc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
+            await updateDoc(doc(db, 'orders', orderId), {
+                paymentReference: ref,
+                updatedAt: new Date().toISOString()
+            });
+
+            // Trigger Email
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                fetch('/api/email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'PAYMENT_SUBMITTED',
+                        order,
+                        locale,
+                        customerEmail: user?.email,
+                        customerName: user?.name,
+                        extra: { paymentReference: ref }
+                    })
+                }).catch(console.error);
+            }
+
+            // Refresh orders to show the ref
+            const freshOrders = await ordersApi.list();
+            setOrders(freshOrders);
+            setRefInputs(prev => ({ ...prev, [orderId]: '' }));
+        } catch (err) {
+            console.error("Failed to submit ref:", err);
+            alert("Failed to submit payment reference. Please try again.");
+        } finally {
+            setSubmittingRef(null);
         }
     };
 
@@ -307,18 +352,47 @@ export default function AccountPage() {
                                     ) : (
                                         <div className="space-y-6">
                                             {orders.map(order => (
-                                                <div key={order.id} className="flex flex-col sm:flex-row items-center gap-6 p-6 md:p-8 bg-[#FEFAE0]/40 border border-cream-dark/20 rounded-2xl hover:shadow-md transition-shadow">
+                                                <div key={order.id} className="flex flex-col sm:flex-row items-center sm:items-start lg:items-center gap-6 p-6 md:p-8 bg-[#FEFAE0]/40 border border-cream-dark/20 rounded-2xl hover:shadow-md transition-shadow">
                                                     <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center border border-cream-dark/20 shrink-0">
                                                         <Package className="w-6 h-6 text-gold" />
                                                     </div>
-                                                    <div className="flex-1 text-center sm:text-left">
+                                                    <div className="flex-1 text-center sm:text-left w-full">
                                                         <p className="font-serif font-normal text-lg tracking-wide text-forest-dark mb-1">#{order.id.slice(0, 8).toUpperCase()}</p>
                                                         <p className="text-[0.9375rem] text-charcoal-light font-light">{new Date(order.createdAt).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB')}</p>
+
+                                                        {order.status === 'pending_payment' && (
+                                                            <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full sm:max-w-sm">
+                                                                {order.paymentReference ? (
+                                                                    <div className="bg-green-50 text-green-700 text-xs px-3 py-2 rounded-lg border border-green-200">
+                                                                        {locale === 'fr' ? 'Référence soumise :' : 'Reference submitted:'} <strong>{order.paymentReference}</strong>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder={locale === 'fr' ? 'Référence de virement' : 'Bank transfer ref'}
+                                                                            value={refInputs[order.id] || ''}
+                                                                            onChange={(e) => setRefInputs(prev => ({ ...prev, [order.id]: e.target.value }))}
+                                                                            className="flex-1 px-3 py-2 text-sm border border-cream-dark/30 rounded-lg outline-none focus:border-gold/60"
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => submitPaymentReference(order.id)}
+                                                                            disabled={submittingRef === order.id || !refInputs[order.id]?.trim()}
+                                                                            className="px-4 py-2 bg-[#0F2E22] text-white text-xs font-medium rounded-lg disabled:opacity-50 whitespace-nowrap"
+                                                                        >
+                                                                            {submittingRef === order.id ? '...' : (locale === 'fr' ? 'Soumettre' : 'Submit')}
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <span className={`px-4 py-1.5 rounded-full text-[0.65rem] font-medium tracking-widest uppercase ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#FEFAE0] text-[#0F2E22] border border-[#C9A84C]'}`}>
-                                                        {order.status}
-                                                    </span>
-                                                    <p className="font-medium text-xl tracking-wide text-forest-dark">{formatPrice(order.total)}</p>
+                                                    <div className="flex flex-col items-center sm:items-end gap-2 shrink-0">
+                                                        <span className={`px-4 py-1.5 rounded-full text-[0.65rem] font-medium tracking-widest uppercase ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#FEFAE0] text-[#0F2E22] border border-[#C9A84C]'}`}>
+                                                            {order.status}
+                                                        </span>
+                                                        <p className="font-medium text-xl tracking-wide text-forest-dark">{formatPrice(order.total)}</p>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

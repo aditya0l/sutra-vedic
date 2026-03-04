@@ -117,6 +117,28 @@ export default function OrdersTab({ token }: { token: string }) {
                 ...(extra || {}),
                 updatedAt: new Date().toISOString()
             });
+
+            // Trigger Email Update
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                const customerEmail = order.user?.email || order.guestEmail;
+                const customerName = order.user?.name || order.guestName;
+                if (customerEmail) {
+                    fetch('/api/email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'STATUS_UPDATED',
+                            order: { ...order, status, ...(extra || {}) }, // Send updated state
+                            locale: order.locale || 'fr',
+                            customerEmail,
+                            customerName,
+                            extra
+                        })
+                    }).catch(console.error);
+                }
+            }
+
             fetchOrders();
             setExpanded(null);
         } catch (err: any) {
@@ -243,6 +265,12 @@ export default function OrdersTab({ token }: { token: string }) {
                                                     {order.trackingNumber && (
                                                         <div style={{ marginTop: 8, fontSize: 12, background: '#ede9fe', color: '#5b21b6', padding: '4px 8px', borderRadius: 6, display: 'inline-block' }}>
                                                             Tracking: {order.trackingNumber}
+                                                        </div>
+                                                    )}
+                                                    {order.paymentReference && (
+                                                        <div style={{ marginTop: 8, fontSize: 13, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '8px 12px', borderRadius: 6 }}>
+                                                            <div style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 2 }}>Payment Reference</div>
+                                                            <div style={{ fontFamily: 'monospace', fontSize: 14 }}>{order.paymentReference}</div>
                                                         </div>
                                                     )}
                                                 </div>

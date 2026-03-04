@@ -86,6 +86,20 @@ function CheckoutContent() {
             setOrderTotal(getTotal());
             clearCart();
             setIsComplete(true);
+
+            // Trigger Email
+            fetch('/api/email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'ORDER_CREATED',
+                    order: orderData,
+                    locale: locale,
+                    customerEmail: (form as any).email,
+                    customerName: `${form.firstName} ${form.lastName}`,
+                    extra: { bankInfo: bank }
+                })
+            }).catch(e => console.error("Email failed:", e));
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Something went wrong.';
             setError(msg);
