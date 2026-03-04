@@ -221,7 +221,7 @@ export default function OrdersTab({ token }: { token: string }) {
                                         </div>
                                     </div>
                                     <div style={{ fontWeight: 700, fontSize: 15, color: '#0F2E22', letterSpacing: '0.01em' }}>
-                                        €{order.total.toFixed(2)}
+                                        €{(order.total || order.totalAmount || 0).toFixed(2)}
                                     </div>
                                     <StatusBadge status={order.status} />
                                     <span style={{ color: '#94a3b8' }}><IconChevron open={isOpen} /></span>
@@ -246,7 +246,7 @@ export default function OrdersTab({ token }: { token: string }) {
                                                 })}
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginTop: 10, fontSize: 14, color: '#0f172a' }}>
                                                     <span>Total</span>
-                                                    <span>€{order.total.toFixed(2)}</span>
+                                                    <span>€{(order.total || order.totalAmount || 0).toFixed(2)}</span>
                                                 </div>
                                             </div>
 
