@@ -5,7 +5,7 @@ import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
-    const [email, setEmail] = useState('admin@sutravedic.com');
+    const [email, setEmail] = useState('contact@sutravedic.fr');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);

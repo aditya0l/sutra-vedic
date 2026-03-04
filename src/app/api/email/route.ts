@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-const ADMIN_EMAIL = 'admin@sutravedic.com';
+const ADMIN_EMAIL = 'contact@sutravedic.fr';
 
 export async function POST(request: Request) {
     try {
