@@ -12,6 +12,17 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:1234567890:web:abcdef",
 };
 
+// Check for missing environment variables in browser console
+if (typeof window !== 'undefined') {
+    const missing = Object.entries(firebaseConfig)
+        .filter(([_, value]) => value.includes('dummy'))
+        .map(([key]) => key);
+    if (missing.length > 0) {
+        console.warn("⚠️ Firebase configuration is using dummy values for:", missing.join(', '));
+        console.warn("Please ensure NEXT_PUBLIC_FIREBASE environment variables are set in Vercel.");
+    }
+}
+
 // Initialize Firebase only once
 let app;
 try {

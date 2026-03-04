@@ -19,8 +19,11 @@ export default function LoginPage({ onLogin }: { onLogin: (token: string) => voi
             const user = userCredential.user;
             const token = await user.getIdToken();
             onLogin(token);
-        } catch {
-            setError('Server unreachable. Make sure the backend is running.');
+        } catch (err: any) {
+            console.error("Login error:", err);
+            // Provide more detail if available in the error object (e.g. Firebase error code)
+            const msg = err.code || err.message || 'Server unreachable. Make sure the backend is running.';
+            setError(`Error: ${msg}`);
         } finally {
             setLoading(false);
         }
