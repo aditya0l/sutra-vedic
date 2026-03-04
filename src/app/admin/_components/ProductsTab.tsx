@@ -200,8 +200,8 @@ export default function ProductsTab({ token }: { token: string }) {
                             <input style={inp()} type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
                         </div>
                         <div>
-                            <Label>Compare At Price (€)</Label>
-                            <input style={inp()} type="number" step="0.01" placeholder="Original Price" value={form.compareAtPrice} onChange={e => setForm(f => ({ ...f, compareAtPrice: e.target.value }))} />
+                            <Label>Compare At Price (€) - (Original Price for Discount Display)</Label>
+                            <input style={inp()} type="number" step="0.01" placeholder="e.g. 250.00" value={form.compareAtPrice} onChange={e => setForm(f => ({ ...f, compareAtPrice: e.target.value }))} />
                         </div>
                         <div>
                             <Label>Stock Quantity</Label>
@@ -284,7 +284,7 @@ export default function ProductsTab({ token }: { token: string }) {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                {['Product', 'SKU', 'Category', 'Price', 'Stock', 'Status', ''].map(h => (
+                                {['Product', 'SKU', 'Category', 'Price', 'Discount', 'Stock', 'Status', ''].map(h => (
                                     <th key={h} style={{
                                         padding: '11px 16px', textAlign: 'left',
                                         fontSize: 11, fontWeight: 700, color: '#94a3b8',
@@ -306,7 +306,14 @@ export default function ProductsTab({ token }: { token: string }) {
                                         <td style={{ padding: '13px 16px', fontSize: 13.5, fontWeight: 600, color: '#0f172a' }}>{name}</td>
                                         <td style={{ padding: '13px 16px', fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{p.sku}</td>
                                         <td style={{ padding: '13px 16px', fontSize: 13, color: '#64748b' }}>{catName}</td>
-                                        <td style={{ padding: '13px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>€{Number(p.price).toFixed(2)}</td>
+                                        <td style={{ padding: '13px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                                            €{Number(p.price).toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '13px 16px', fontSize: 12, color: '#94a3b8' }}>
+                                            {p.compareAtPrice ? (
+                                                <span style={{ textDecoration: 'line-through' }}>€{Number(p.compareAtPrice).toFixed(2)}</span>
+                                            ) : '—'}
+                                        </td>
                                         <td style={{ padding: '13px 16px', fontSize: 13, fontWeight: 700, color: p.stock > 5 ? '#059669' : p.stock > 0 ? '#d97706' : '#dc2626' }}>
                                             {p.stock}
                                         </td>

@@ -115,12 +115,20 @@ function ShopContent() {
                                 >
                                     {/* Image Container */}
                                     <div className="relative aspect-[4/5] bg-white rounded-[2rem] overflow-hidden shadow-[0_10px_40px_-15px_rgba(0,0,0,0.08)] group-hover:shadow-[0_20px_80px_-20px_rgba(0,0,0,0.12)] transition-all duration-700">
-                                        <div className="absolute inset-0 flex items-center justify-center p-12">
-                                            <div className="w-full h-full bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform duration-[1.2s] ease-out-expo">
-                                                <span className="text-8xl filter grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700">
-                                                    {product.slug.includes('pain') ? '🩹' : product.slug.includes('massage') ? '🧴' : '🍃'}
-                                                </span>
-                                            </div>
+                                        <div className="absolute inset-0 flex items-center justify-center p-0">
+                                            {product.images?.[0] ? (
+                                                <img
+                                                    src={product.images[0]}
+                                                    alt={getLocalizedValue(product.name, locale)}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.2s] ease-out-expo"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform duration-[1.2s] ease-out-expo">
+                                                    <span className="text-8xl filter grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700">
+                                                        {product.slug.includes('pain') ? '🩹' : product.slug.includes('massage') ? '🧴' : '🍃'}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="absolute top-8 left-0 right-0 flex justify-center gap-2">

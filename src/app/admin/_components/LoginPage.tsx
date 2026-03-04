@@ -5,7 +5,7 @@ import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
-    const [email, setEmail] = useState('admin@sutravedic.com');
+    const [email, setEmail] = useState('contact@sutravedic.fr');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -84,7 +84,7 @@ export default function LoginPage({ onLogin }: { onLogin: (token: string) => voi
                 </form>
 
                 <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', marginTop: 24 }}>
-                    Default: admin@sutravedic.com / Admin@2026
+                    Default: contact@sutravedic.fr / Admin@2026
                 </p>
             </div>
         </div>

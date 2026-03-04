@@ -19,8 +19,8 @@ export default function CGUPage() {
                         <h2>{isFr ? '1. Acceptation des conditions' : '1. Acceptance of Terms'}</h2>
                         <p>
                             {isFr
-                                ? 'En accédant au site sutravedic.com, vous acceptez de respecter ces conditions d\'utilisation. Si vous refusez, veuillez quitter le site.'
-                                : 'By accessing and using sutravedic.com, you agree to comply with and be bound by these Terms of Use.'}
+                                ? 'En accédant au site sutravedic.fr, vous acceptez de respecter ces conditions d\'utilisation. Si vous refusez, veuillez quitter le site.'
+                                : 'By accessing and using sutravedic.fr, you agree to comply with and be bound by these Terms of Use.'}
                         </p>
                     </section>
 

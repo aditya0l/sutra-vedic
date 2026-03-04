@@ -19,8 +19,8 @@ export default function CGVPage() {
                         <h2>{isFr ? '1. Objet' : '1. Purpose'}</h2>
                         <p>
                             {isFr
-                                ? 'Les présentes conditions générales de vente (CGV) définissent les droits et obligations des parties dans le cadre de la vente des produits proposés par Sutra Vedic sur son site sutravedic.com.'
-                                : 'These General Terms and Conditions of Sale (CGV) define the rights and obligations of the parties in connection with the sale of products offered by Sutra Vedic on its website sutravedic.com.'}
+                                ? 'Les présentes conditions générales de vente (CGV) définissent les droits et obligations des parties dans le cadre de la vente des produits proposés par Sutra Vedic sur son site sutravedic.fr.'
+                                : 'These General Terms and Conditions of Sale (CGV) define the rights and obligations of the parties in connection with the sale of products offered by Sutra Vedic on its website sutravedic.fr.'}
                         </p>
                     </section>
 

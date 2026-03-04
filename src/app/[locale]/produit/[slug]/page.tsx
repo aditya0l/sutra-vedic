@@ -124,8 +124,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                     <div className="space-y-8">
                         <div className="relative aspect-square bg-[#FEFAE0]/50 rounded-[3rem] overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] border border-cream-dark/20 flex items-center justify-center">
                             <div className="w-full h-full p-20">
-                                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/30 flex items-center justify-center">
-                                    <span className="text-[10rem] opacity-60">🌿</span>
+                                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/30 flex items-center justify-center overflow-hidden">
+                                    {product.images?.[0] ? (<img src={product.images[0]} alt={getLocalizedValue(product.name, locale)} className="w-full h-full object-cover" />) : (<span className="text-[10rem] opacity-60">🌿</span>)}
                                 </div>
                             </div>
                             <div className="absolute top-10 left-10 flex flex-col gap-2.5">
@@ -410,7 +410,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                             {relatedProducts.map(rp => (
                                 <Link key={rp.id} href={{ pathname: '/produit/[slug]', params: { slug: rp.slug } }} className="group block text-center">
                                     <div className="aspect-[4/5] bg-gradient-to-br from-cream to-sage/10 rounded-[2rem] flex items-center justify-center mb-6 overflow-hidden">
-                                        <span className="text-5xl opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out">🌿</span>
+                                        {rp.images?.[0] ? (
+                                            <img
+                                                src={rp.images[0]}
+                                                alt={getLocalizedValue(rp.name, locale)}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                                            />
+                                        ) : (
+                                            <span className="text-5xl opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out">🌿</span>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <h3 className="font-serif font-normal text-lg tracking-wide text-forest-dark group-hover:text-gold transition-colors line-clamp-1">

@@ -47,8 +47,8 @@ export default function ReturnPolicyPage() {
                         <h2>{isFr ? '4. Articles endommagés' : '4. Damaged Items'}</h2>
                         <p>
                             {isFr
-                                ? 'Si vous recevez un produit endommagé ou défectueux, veuillez nous contacter immédiatement à returns@sutravedic.fr avec des photos.'
-                                : 'If you receive a damaged or defective product, please contact us immediately at returns@sutravedic.fr with photos of the product.'}
+                                ? 'Si vous recevez un produit endommagé ou défectueux, veuillez nous contacter immédiatement à contact@sutravedic.fr avec des photos.'
+                                : 'If you receive a damaged or defective product, please contact us immediately at contact@sutravedic.fr with photos of the product.'}
                         </p>
                     </section>
                 </div>

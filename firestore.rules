@@ -6,9 +6,9 @@ service cloud.firestore {
     // Admin check function based on Firebase Auth custom claims or a specific Admin UID 
     // Since we don't have custom claims deployed via Cloud Functions yet, 
     // we use a specific known Admin email or a document lookup.
-    // In our auth flow, admins log in with: admin@sutravedic.com
+    // In our auth flow, admins log in with: contact@sutravedic.fr
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'admin@sutravedic.com';
+      return request.auth != null && request.auth.token.email == 'contact@sutravedic.fr';
     }
 
     // Is the user authenticated?

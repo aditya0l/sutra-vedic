@@ -19,8 +19,8 @@ export default function LegalNoticePage() {
                         <h2>{isFr ? '1. Édition du site' : '1. Site Edition'}</h2>
                         <p>
                             {isFr
-                                ? 'En vertu de l\'article 6 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l\'économie numérique, il est précisé aux utilisateurs du site sutravedic.com l\'identité des différents intervenants dans le cadre de sa réalisation et de son suivi :'
-                                : 'In accordance with Article 6 of Law No. 2004-575 of June 21, 2004, regarding confidence in the digital economy, users of the website sutravedic.com are informed of the identity of the various stakeholders involved in its creation and monitoring:'}
+                                ? 'En vertu de l\'article 6 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l\'économie numérique, il est précisé aux utilisateurs du site sutravedic.fr l\'identité des différents intervenants dans le cadre de sa réalisation et de son suivi :'
+                                : 'In accordance with Article 6 of Law No. 2004-575 of June 21, 2004, regarding confidence in the digital economy, users of the website sutravedic.fr are informed of the identity of the various stakeholders involved in its creation and monitoring:'}
                         </p>
                         <ul>
                             <li><strong>{isFr ? 'Propriétaire :' : 'Owner:'}</strong> Sutra Vedic SARL - contact@sutravedic.fr</li>
@@ -47,15 +47,15 @@ export default function LegalNoticePage() {
                         <h2>{isFr ? '3. Limitations de responsabilité' : '3. Limitation of Liability'}</h2>
                         <p>
                             {isFr
-                                ? 'Sutra Vedic ne pourra être tenu pour responsable des dommages directs et indirects causés au matériel de l’utilisateur, lors de l’accès au site. Sutra Vedic décline toute responsabilité quant à l’utilisation qui pourrait être faite des informations et contenus présents sur sutravedic.com.'
-                                : 'Sutra Vedic cannot be held liable for direct or indirect damage caused to the user\'s equipment when accessing the site. Sutra Vedic declines all responsibility for the use that may be made of the information and content present on sutravedic.com.'}
+                                ? 'Sutra Vedic ne pourra être tenu pour responsable des dommages directs et indirects causés au matériel de l’utilisateur, lors de l’accès au site. Sutra Vedic décline toute responsabilité quant à l’utilisation qui pourrait être faite des informations et contenus présents sur sutravedic.fr.'
+                                : 'Sutra Vedic cannot be held liable for direct or indirect damage caused to the user\'s equipment when accessing the site. Sutra Vedic declines all responsibility for the use that may be made of the information and content present on sutravedic.fr.'}
                         </p>
                     </section>
 
                     <section className="mb-10">
                         <h2>4. Management of Personal Data</h2>
                         <p>
-                            The use of the sutravedic.com site may involve the collection of personal data.
+                            The use of the sutravedic.fr site may involve the collection of personal data.
                             For more information, please consult our <strong>Privacy Policy</strong> and <strong>Data Protection</strong> page.
                         </p>
                     </section>
