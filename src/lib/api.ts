@@ -236,10 +236,21 @@ export const ordersApi = {
             createdAt: new Date().toISOString(),
         };
 
-        // Firestore crashes if attributes are explicitly `undefined`
-        const cleanOrder = Object.fromEntries(
-            Object.entries(newOrder).filter(([_, v]) => v !== undefined)
-        );
+        // Firestore crashes if ANY nested attribute is explicitly `undefined`
+        const removeUndefinedDeep = (obj: any): any => {
+            if (Array.isArray(obj)) {
+                return obj.map(removeUndefinedDeep).filter(v => v !== undefined);
+            } else if (obj !== null && typeof obj === 'object') {
+                return Object.fromEntries(
+                    Object.entries(obj)
+                        .map(([k, v]) => [k, removeUndefinedDeep(v)])
+                        .filter(([_, v]) => v !== undefined)
+                );
+            }
+            return obj;
+        };
+
+        const cleanOrder = removeUndefinedDeep(newOrder);
 
         const docRef = await addDoc(collection(db, 'orders'), cleanOrder);
 
