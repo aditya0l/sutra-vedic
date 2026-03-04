@@ -76,7 +76,7 @@ function CheckoutContent() {
             };
 
             const orderData = await ordersApi.create({
-                items: items.map(i => ({ productId: i.product.id, quantity: i.quantity })),
+                items: items.map(i => ({ productId: i.product.id, quantity: i.quantity, variantId: i.variantId })),
                 shippingAddress,
                 locale: locale as 'fr' | 'en',
             });
@@ -239,14 +239,20 @@ function CheckoutContent() {
                                     {locale === 'fr' ? 'Résumé' : 'Summary'}
                                 </h2>
                                 <div className="space-y-4 mb-6">
-                                    {items.map(item => (
-                                        <div key={item.product.id} className="flex justify-between text-sm">
-                                            <span className="text-charcoal-light">
-                                                {getLocalizedValue(item.product.name, locale)} × {item.quantity}
-                                            </span>
-                                            <span className="font-medium text-forest-dark">{formatPrice(item.product.price * item.quantity)}</span>
-                                        </div>
-                                    ))}
+                                    {items.map(item => {
+                                        const variant = item.variantId && item.product.variants
+                                            ? item.product.variants.find(v => v.id === item.variantId)
+                                            : null;
+                                        return (
+                                            <div key={`${item.product.id}-${item.variantId}`} className="flex justify-between text-sm">
+                                                <span className="text-charcoal-light">
+                                                    {getLocalizedValue(item.product.name, locale)}
+                                                    {variant && ` (${getLocalizedValue(variant.name, locale)})`} × {item.quantity}
+                                                </span>
+                                                <span className="font-medium text-forest-dark">{formatPrice((variant ? variant.price : item.product.price) * item.quantity)}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                                 <div className="space-y-3 pt-4 border-t border-cream-dark/20">
                                     <div className="flex justify-between text-sm"><span className="text-charcoal-light">{t('subtotal')}</span><span className="font-medium">{formatPrice(getSubtotal())}</span></div>

@@ -26,7 +26,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState('description');
     const [openFaq, setOpenFaq] = useState<number | null>(null);
+    const [selectedVariant, setSelectedVariant] = useState<NonNullable<Product['variants']>[number] | null>(null);
     const [addedToCart, setAddedToCart] = useState(false);
+
+    useEffect(() => {
+        if (product && product.variants && product.variants.length > 0) {
+            setSelectedVariant(product.variants[0]);
+        }
+    }, [product]);
 
     useEffect(() => {
         setLoading(true);
@@ -51,14 +58,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
     const handleAddToCart = () => {
         if (!product) return;
-        addItem(product, quantity);
+        addItem(product, quantity, selectedVariant?.id || undefined);
         setAddedToCart(true);
         setTimeout(() => setAddedToCart(false), 2000);
     };
 
     const handleBuyNow = () => {
         if (!product) return;
-        addItem(product, quantity);
+        addItem(product, quantity, selectedVariant?.id || undefined);
         router.push('/checkout');
     };
 
@@ -166,7 +173,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         {/* Price */}
                         <div className="flex flex-col mb-8 text-center lg:text-left">
                             <div className="flex items-baseline justify-center lg:justify-start gap-4">
-                                <span className="text-4xl font-normal text-[#0F2E22] tracking-wide">{formatPrice(product.price)}</span>
+                                <span className="text-4xl font-normal text-[#0F2E22] tracking-wide">{formatPrice(selectedVariant ? selectedVariant.price : product.price)}</span>
                                 {product.compareAtPrice && product.compareAtPrice > product.price && (
                                     <span className="text-xl text-[#2D2D2D]/40 line-through font-light">{formatPrice(product.compareAtPrice)}</span>
                                 )}
@@ -182,6 +189,29 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         <p className="text-lg text-[#2D2D2D]/70 leading-relaxed font-light mb-12 max-w-xl mx-auto lg:mx-0">
                             {getLocalizedValue(product.shortDescription, locale)}
                         </p>
+
+                        {/* Variant Selection */}
+                        {product.variants && product.variants.length > 0 && (
+                            <div className="mb-10 w-full">
+                                <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#2D2D2D]/40 mb-4 text-center lg:text-left">
+                                    {locale === 'fr' ? 'Choisir la taille' : 'Choose Size'}
+                                </p>
+                                <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+                                    {product.variants.map((variant) => (
+                                        <button
+                                            key={variant.id}
+                                            onClick={() => setSelectedVariant(variant)}
+                                            className={`px-8 py-3.5 rounded-xl border-2 transition-all font-bold text-[0.85rem] tracking-wider uppercase ${selectedVariant?.id === variant.id
+                                                ? 'border-[#C9A84C] bg-[#C9A84C]/5 text-[#0F2E22]'
+                                                : 'border-cream-dark/20 text-[#2D2D2D]/60 hover:border-[#C9A84C]/40 hover:text-[#0F2E22]'
+                                                }`}
+                                        >
+                                            {getLocalizedValue(variant.name, locale)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Stock Status */}
                         <div className="flex items-center gap-2 mb-6">
@@ -250,7 +280,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                             ))}
                         </div>
 
-                        <p className="text-xs text-charcoal-light mt-6">{t('sku')}: {product.sku}</p>
+                        <p className="text-xs text-charcoal-light mt-6">{t('sku')}: {selectedVariant ? selectedVariant.sku : product.sku}</p>
                     </div>
                 </div>
 
@@ -400,7 +430,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                 <div className="container-premium flex items-center gap-4">
                     <div>
                         <p className="text-sm text-charcoal-light line-clamp-1">{getLocalizedValue(product.name, locale)}</p>
-                        <p className="text-lg font-bold text-forest-dark">{formatPrice(product.price)}</p>
+                        <p className="text-lg font-bold text-forest-dark">{formatPrice(selectedVariant ? selectedVariant.price : product.price)}</p>
                     </div>
                     <button
                         onClick={handleAddToCart}

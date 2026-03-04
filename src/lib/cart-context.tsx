@@ -5,9 +5,9 @@ import { Product, CartItem } from '@/types';
 
 interface CartContextType {
     items: CartItem[];
-    addItem: (product: Product, quantity?: number) => void;
-    removeItem: (productId: string) => void;
-    updateQuantity: (productId: string, quantity: number) => void;
+    addItem: (product: Product, quantity?: number, variantId?: string) => void;
+    removeItem: (productId: string, variantId?: string) => void;
+    updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
     clearCart: () => void;
     getItemCount: () => number;
     getSubtotal: () => number;
@@ -39,32 +39,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [items]);
 
-    const addItem = useCallback((product: Product, quantity = 1) => {
+    const addItem = useCallback((product: Product, quantity = 1, variantId?: string) => {
         setItems(prev => {
-            const existing = prev.find(item => item.product.id === product.id);
+            const existing = prev.find(item => item.product.id === product.id && item.variantId === variantId);
             if (existing) {
                 return prev.map(item =>
-                    item.product.id === product.id
+                    item.product.id === product.id && item.variantId === variantId
                         ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock) }
                         : item
                 );
             }
-            return [...prev, { product, quantity: Math.min(quantity, product.stock) }];
+            return [...prev, { product, quantity: Math.min(quantity, product.stock), variantId }];
         });
     }, []);
 
-    const removeItem = useCallback((productId: string) => {
-        setItems(prev => prev.filter(item => item.product.id !== productId));
+    const removeItem = useCallback((productId: string, variantId?: string) => {
+        setItems(prev => prev.filter(item => !(item.product.id === productId && item.variantId === variantId)));
     }, []);
 
-    const updateQuantity = useCallback((productId: string, quantity: number) => {
+    const updateQuantity = useCallback((productId: string, quantity: number, variantId?: string) => {
         if (quantity <= 0) {
-            removeItem(productId);
+            removeItem(productId, variantId);
             return;
         }
         setItems(prev =>
             prev.map(item =>
-                item.product.id === productId
+                item.product.id === productId && item.variantId === variantId
                     ? { ...item, quantity: Math.min(quantity, item.product.stock) }
                     : item
             )
@@ -80,7 +80,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [items]);
 
     const getSubtotal = useCallback(() => {
-        return items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+        return items.reduce((total, item) => {
+            const variant = item.variantId && item.product.variants
+                ? item.product.variants.find(v => v.id === item.variantId)
+                : null;
+            const price = variant ? variant.price : item.product.price;
+            return total + price * item.quantity;
+        }, 0);
     }, [items]);
 
     const getTax = useCallback(() => {

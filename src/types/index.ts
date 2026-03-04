@@ -22,6 +22,13 @@ export interface Product {
     certifications: string[];
     tags: string[];
     faq: { question: { fr: string; en: string }; answer: { fr: string; en: string } }[];
+    variants?: {
+        id: string;
+        name: { fr: string; en: string };
+        price: number;
+        sku: string;
+        stock: number;
+    }[];
 }
 
 export interface Category {
@@ -47,6 +54,7 @@ export interface Review {
 export interface CartItem {
     product: Product;
     quantity: number;
+    variantId?: string;
 }
 
 export interface User {
@@ -60,7 +68,7 @@ export interface User {
 export interface Order {
     id: string;
     userId: string;
-    items: { product: Product; quantity: number; price: number }[];
+    items: { product: Product; quantity: number; price: number; variantId?: string }[];
     status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
     subtotal: number;
     shipping: number;

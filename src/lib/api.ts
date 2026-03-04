@@ -193,7 +193,7 @@ export const categoriesApi = {
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 export interface CheckoutPayload {
-    items: { productId: string; quantity: number }[];
+    items: { productId: string; quantity: number; variantId?: string }[];
     shippingAddress: {
         firstName: string;
         lastName: string;
@@ -218,7 +218,13 @@ export const ordersApi = {
         for (const item of payload.items) {
             const productDoc = await getDoc(doc(db, 'products', item.productId));
             if (productDoc.exists()) {
-                totalAmount += (productDoc.data().price * item.quantity);
+                const productData = productDoc.data() as Product;
+                let price = productData.price;
+                if (item.variantId && productData.variants) {
+                    const variant = productData.variants.find(v => v.id === item.variantId);
+                    if (variant) price = variant.price;
+                }
+                totalAmount += (price * item.quantity);
             }
         }
 

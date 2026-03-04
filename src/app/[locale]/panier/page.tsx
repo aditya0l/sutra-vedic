@@ -41,41 +41,52 @@ export default function CartPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16">
                     {/* Cart Items */}
                     <div className="lg:col-span-2 space-y-6">
-                        {items.map(item => (
-                            <div key={item.product.id} className="bg-white rounded-[2rem] p-6 md:p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] border border-cream-dark/20 flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left transition-all hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)]">
-                                <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 flex items-center justify-center shrink-0 border border-cream-dark/10">
-                                    <span className="text-5xl opacity-80">🌿</span>
-                                </div>
-                                <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start w-full">
-                                    <Link href={{ pathname: '/produit/[slug]', params: { slug: item.product.slug } }} className="font-serif font-normal text-xl text-forest-dark hover:text-gold transition-colors line-clamp-1 tracking-wide">
-                                        {getLocalizedValue(item.product.name, locale)}
-                                    </Link>
-                                    <p className="text-[0.75rem] uppercase tracking-widest text-[#C9A84C] mt-2 font-medium">
-                                        {typeof item.product.category === 'object'
-                                            ? getLocalizedValue(item.product.category as { fr: string; en: string }, locale)
-                                            : item.product.category}
-                                    </p>
-                                    <div className="flex flex-col sm:flex-row items-center gap-6 mt-6 w-full justify-between sm:justify-start">
-                                        <div className="flex items-center border border-cream-dark/20 rounded-xl overflow-hidden bg-white/50">
-                                            <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="w-10 h-10 flex items-center justify-center hover:bg-[#FEFAE0] transition-colors text-charcoal-light">
-                                                <Minus className="w-3 h-3" />
-                                            </button>
-                                            <span className="w-12 h-10 flex items-center justify-center text-[0.9375rem] font-medium border-x border-cream-dark/20 text-forest-dark bg-white">{item.quantity}</span>
-                                            <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="w-10 h-10 flex items-center justify-center hover:bg-[#FEFAE0] transition-colors text-charcoal-light">
-                                                <Plus className="w-3 h-3" />
+                        {items.map(item => {
+                            const variant = item.variantId && item.product.variants
+                                ? item.product.variants.find(v => v.id === item.variantId)
+                                : null;
+                            const price = variant ? variant.price : item.product.price;
+                            return (
+                                <div key={`${item.product.id}-${item.variantId}`} className="bg-white rounded-[2rem] p-6 md:p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] border border-cream-dark/20 flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left transition-all hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)]">
+                                    <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-[#FEFAE0] to-[#E8D8A0]/20 flex items-center justify-center shrink-0 border border-cream-dark/10">
+                                        <span className="text-5xl opacity-80">🌿</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start w-full">
+                                        <Link href={{ pathname: '/produit/[slug]', params: { slug: item.product.slug } }} className="font-serif font-normal text-xl text-forest-dark hover:text-gold transition-colors line-clamp-1 tracking-wide">
+                                            {getLocalizedValue(item.product.name, locale)}
+                                            {variant && (
+                                                <span className="block text-sm text-[#2D2D2D]/40 font-light mt-1">
+                                                    {getLocalizedValue(variant.name, locale)}
+                                                </span>
+                                            )}
+                                        </Link>
+                                        <p className="text-[0.75rem] uppercase tracking-widest text-[#C9A84C] mt-2 font-medium">
+                                            {typeof item.product.category === 'object'
+                                                ? getLocalizedValue(item.product.category as { fr: string; en: string }, locale)
+                                                : item.product.category}
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row items-center gap-6 mt-6 w-full justify-between sm:justify-start">
+                                            <div className="flex items-center border border-cream-dark/20 rounded-xl overflow-hidden bg-white/50">
+                                                <button onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.variantId)} className="w-10 h-10 flex items-center justify-center hover:bg-[#FEFAE0] transition-colors text-charcoal-light">
+                                                    <Minus className="w-3 h-3" />
+                                                </button>
+                                                <span className="w-12 h-10 flex items-center justify-center text-[0.9375rem] font-medium border-x border-cream-dark/20 text-forest-dark bg-white">{item.quantity}</span>
+                                                <button onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.variantId)} className="w-10 h-10 flex items-center justify-center hover:bg-[#FEFAE0] transition-colors text-charcoal-light">
+                                                    <Plus className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                            <button onClick={() => removeItem(item.product.id, item.variantId)} className="text-red-400 hover:text-red-500 transition-colors bg-red-50 p-2.5 rounded-full">
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
-                                        <button onClick={() => removeItem(item.product.id)} className="text-red-400 hover:text-red-500 transition-colors bg-red-50 p-2.5 rounded-full">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                    </div>
+                                    <div className="text-center sm:text-right shrink-0 mt-4 sm:mt-0">
+                                        <p className="font-medium text-xl tracking-wide text-forest-dark">{formatPrice(price * item.quantity)}</p>
+                                        {item.quantity > 1 && <p className="text-xs text-charcoal-light mt-1.5">{formatPrice(price)} x {item.quantity}</p>}
                                     </div>
                                 </div>
-                                <div className="text-center sm:text-right shrink-0 mt-4 sm:mt-0">
-                                    <p className="font-medium text-xl tracking-wide text-forest-dark">{formatPrice(item.product.price * item.quantity)}</p>
-                                    {item.quantity > 1 && <p className="text-xs text-charcoal-light mt-1.5">{formatPrice(item.product.price)} x {item.quantity}</p>}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* Order Summary */}
