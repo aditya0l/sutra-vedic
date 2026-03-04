@@ -240,7 +240,7 @@ export default function OrdersTab({ token }: { token: string }) {
                                                     return (
                                                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
                                                             <span style={{ color: '#374151' }}>{name || '—'} <span style={{ color: '#94a3b8' }}>× {item.quantity}</span></span>
-                                                            <span style={{ fontWeight: 600, color: '#0f172a' }}>€{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                                                            <span style={{ fontWeight: 600, color: '#0f172a' }}>€{((item.unitPrice || 0) * item.quantity).toFixed(2)}</span>
                                                         </div>
                                                     );
                                                 })}
