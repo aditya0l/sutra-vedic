@@ -18,6 +18,9 @@ const IconPackage = () => (
 const IconX = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
 );
+const IconReturn = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 0 0-4-4H4" /></svg>
+);
 const IconChevron = ({ open }: { open: boolean }) => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9" /></svg>
 );
@@ -25,9 +28,11 @@ const IconChevron = ({ open }: { open: boolean }) => (
 // ─── Status config ─────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
     pending_payment: { label: 'Pending Payment', color: '#92400e', bg: '#fef3c7', dot: '#f59e0b' },
+    PENDING: { label: 'Pending Payment', color: '#92400e', bg: '#fef3c7', dot: '#f59e0b' },
     processing: { label: 'Payment Confirmed', color: '#1e3a5f', bg: '#dbeafe', dot: '#3b82f6' },
     shipped: { label: 'Shipped', color: '#4c1d95', bg: '#ede9fe', dot: '#8b5cf6' },
     delivered: { label: 'Delivered', color: '#064e3b', bg: '#d1fae5', dot: '#10b981' },
+    returned: { label: 'Returned', color: '#9d174d', bg: '#fce7f3', dot: '#f43f5e' },
     cancelled: { label: 'Cancelled', color: '#7f1d1d', bg: '#fee2e2', dot: '#ef4444' },
 };
 
@@ -47,7 +52,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function Btn({ onClick, disabled, variant = 'primary', children, fullWidth }: {
-    onClick: () => void; disabled?: boolean; variant?: 'primary' | 'success' | 'purple' | 'danger' | 'ghost';
+    onClick: (e: React.MouseEvent) => void; disabled?: boolean; variant?: 'primary' | 'success' | 'purple' | 'danger' | 'ghost';
     children: React.ReactNode; fullWidth?: boolean;
 }) {
     const colors = {
@@ -59,7 +64,11 @@ function Btn({ onClick, disabled, variant = 'primary', children, fullWidth }: {
     }[variant];
     return (
         <button
-            onClick={onClick}
+            onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onClick(e);
+            }}
             disabled={disabled}
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -172,6 +181,7 @@ export default function OrdersTab({ token }: { token: string }) {
                     <option value="processing">Confirmed</option>
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>
+                    <option value="returned">Returned</option>
                     <option value="cancelled">Cancelled</option>
                 </select>
             </div>
@@ -278,14 +288,14 @@ export default function OrdersTab({ token }: { token: string }) {
                                         </div>
 
                                         {/* Actions bar */}
-                                        {!['delivered', 'cancelled'].includes(order.status) && (
+                                        {!['cancelled', 'returned'].includes(order.status) && (
                                             <div style={{
                                                 padding: '16px 24px',
                                                 borderTop: '1px solid #f1f5f9',
                                                 display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center',
                                                 background: '#fff',
                                             }}>
-                                                {order.status === 'pending_payment' && (
+                                                {(order.status === 'pending_payment' || order.status === 'PENDING') && (
                                                     <Btn
                                                         variant="success"
                                                         disabled={act.loading}
@@ -295,7 +305,7 @@ export default function OrdersTab({ token }: { token: string }) {
                                                     </Btn>
                                                 )}
 
-                                                {(order.status === 'processing' || order.status === 'pending_payment') && (
+                                                {(order.status === 'processing' || order.status === 'pending_payment' || order.status === 'PENDING') && (
                                                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                                         <input
                                                             placeholder="Tracking number (optional)"
@@ -323,6 +333,16 @@ export default function OrdersTab({ token }: { token: string }) {
                                                         onClick={() => updateStatus(order.id, 'delivered')}
                                                     >
                                                         <IconPackage /> Mark Delivered
+                                                    </Btn>
+                                                )}
+
+                                                {order.status === 'delivered' && (
+                                                    <Btn
+                                                        variant="ghost"
+                                                        disabled={act.loading}
+                                                        onClick={() => updateStatus(order.id, 'returned')}
+                                                    >
+                                                        <IconReturn /> Mark Returned
                                                     </Btn>
                                                 )}
 

@@ -215,6 +215,7 @@ export const ordersApi = {
 
         // Simplified Total Amount Calculation for MVP Firebase Migration
         let totalAmount = 0;
+        const enrichedItems = [];
         for (const item of payload.items) {
             const productDoc = await getDoc(doc(db, 'products', item.productId));
             if (productDoc.exists()) {
@@ -225,14 +226,29 @@ export const ordersApi = {
                     if (variant) price = variant.price;
                 }
                 totalAmount += (price * item.quantity);
+
+                enrichedItems.push({
+                    productId: item.productId,
+                    variantId: item.variantId,
+                    quantity: item.quantity,
+                    unitPrice: price,
+                    productSnapshot: {
+                        name: productData.name,
+                        category: productData.category
+                    }
+                });
             }
         }
 
         const newOrder = {
             userId: user?.uid || null,
-            ...payload,
+            guestName: payload.guestName || payload.shippingAddress.firstName + ' ' + payload.shippingAddress.lastName,
+            email: payload.email,
+            shippingAddress: payload.shippingAddress,
+            locale: payload.locale || 'en',
+            items: enrichedItems,
             totalAmount,
-            status: 'PENDING',
+            status: 'pending_payment',
             createdAt: new Date().toISOString(),
         };
 
