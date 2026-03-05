@@ -215,16 +215,31 @@ function ShopContent() {
                                         </div>
 
                                         <div className="pt-4 flex flex-col items-center gap-4">
-                                            <div className="flex items-center gap-3">
-                                                {product.compareAtPrice && product.compareAtPrice > product.price && (
-                                                    <span className="text-[0.9rem] text-gray-400 line-through font-medium">
-                                                        {formatPrice(product.compareAtPrice)}
-                                                    </span>
-                                                )}
-                                                <span className="text-lg font-medium tracking-wide text-[#0F2E22]">
-                                                    {formatPrice(product.price)}
-                                                </span>
-                                            </div>
+                                            {(() => {
+                                                // For variant products, use the cheapest variant's pricing
+                                                const cheapestVariant = product.variants && product.variants.length > 0
+                                                    ? [...product.variants].sort((a, b) => a.price - b.price)[0]
+                                                    : null;
+                                                const displayPrice = cheapestVariant ? cheapestVariant.price : product.price;
+                                                const displayCompareAt = cheapestVariant
+                                                    ? (cheapestVariant.compareAtPrice ?? null)
+                                                    : (product.compareAtPrice ?? null);
+                                                const hasDiscount = displayCompareAt && displayCompareAt > displayPrice;
+                                                return (
+                                                    <div className="flex items-center gap-3">
+                                                        {hasDiscount && (
+                                                            <span className="text-[0.9rem] text-gray-400 line-through font-medium">
+                                                                {formatPrice(displayCompareAt!)}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-lg font-medium tracking-wide text-[#0F2E22]">
+                                                            {cheapestVariant && product.variants!.length > 1
+                                                                ? `${locale === 'fr' ? 'À partir de ' : 'From '}${formatPrice(displayPrice)}`
+                                                                : formatPrice(displayPrice)}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
                                             <span className="inline-flex items-center gap-2 text-[0.65rem] border-b border-transparent group-hover:border-[#C9A84C] pb-0.5 font-medium text-[#C9A84C] transition-all uppercase tracking-[0.15em]">
                                                 {locale === 'fr' ? 'Détails' : 'Details'} <ArrowRight className="w-3 h-3" />
                                             </span>
@@ -276,8 +291,8 @@ function ShopContent() {
                                             key={variant.id}
                                             onClick={() => setPickerVariantId(variant.id)}
                                             className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all ${isSelected
-                                                    ? 'border-[#0F2E22] bg-[#0F2E22]/5'
-                                                    : 'border-cream-dark/20 hover:border-[#C9A84C]/50 bg-white'
+                                                ? 'border-[#0F2E22] bg-[#0F2E22]/5'
+                                                : 'border-cream-dark/20 hover:border-[#C9A84C]/50 bg-white'
                                                 }`}
                                         >
                                             <span className="font-serif text-base text-[#0F2E22] mb-1">{vName}</span>
