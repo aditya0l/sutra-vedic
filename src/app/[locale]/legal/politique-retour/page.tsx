@@ -1,6 +1,6 @@
 'use client';
 import { useLocale } from 'next-intl';
-import { Shield, RefreshCw, XCircle, Clock, CreditCard, Package } from 'lucide-react';
+import { RefreshCw, XCircle, Clock, CreditCard, Package } from 'lucide-react';
 
 export default function ReturnPolicyPage() {
     const locale = useLocale();
@@ -108,24 +108,6 @@ export default function ReturnPolicyPage() {
                             ].map(c => <li key={c} className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-[#0F2E22]/40 shrink-0" />{c}</li>)}
                         </ul>
                     </div>
-                </div>
-            ),
-        },
-        {
-            icon: Shield,
-            number: '4',
-            title: isFr ? 'Services Panchakarma' : '4. Panchakarma Services',
-            content: (
-                <div className="space-y-2 text-[#2D2D2D]/70">
-                    <p>{isFr ? 'Des remboursements pour les services Panchakarma peuvent être demandés si :' : 'Refunds for Panchakarma services may be requested if:'}</p>
-                    <ul className="space-y-2 mt-2">
-                        {(isFr
-                            ? ['Le service n\'a pas été fourni comme promis.', 'Il y a eu un retard ou un problème significatif avec le service.']
-                            : ['The service was not provided as promised.', 'There was a significant delay or issue with the service.']
-                        ).map(item => (
-                            <li key={item} className="flex items-start gap-2"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-[#C9A84C] shrink-0" />{item}</li>
-                        ))}
-                    </ul>
                 </div>
             ),
         },
