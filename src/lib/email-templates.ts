@@ -171,8 +171,8 @@ export function getCustomerOrderConfirmationEmail({ order, locale, customerName,
                             
                             <p>
                                 ${isFr
-                ? 'Une fois le virement effectué, vous pouvez nous communiquer la référence de transaction depuis votre espace ou répondre à cet email.'
-                : 'Once the transfer is complete, you can provide the transaction reference from your account area or reply to this email.'}
+                ? 'Après avoir effectué votre virement, veuillez soumettre la référence de transaction pour accélérer la validation de votre commande.'
+                : 'After completing your transfer, please submit your transaction reference to speed up order validation.'}
                             </p>
 
                             ${buildOrderSummary(order, locale)}
