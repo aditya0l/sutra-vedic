@@ -143,11 +143,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                                 </div>
                             </div>
                             <div className="absolute top-10 left-10 flex flex-col gap-2.5">
-                                {product.compareAtPrice && product.compareAtPrice > product.price && (
-                                    <span className="px-4 py-1.5 bg-[#dc2626] text-white text-[0.65rem] font-bold tracking-[0.2em] rounded-full uppercase shadow-md text-center">
-                                        -{Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}%
-                                    </span>
-                                )}
+                                {/* Discount badge — uses variant pricing if a variant is selected */}
+                                {(() => {
+                                    const activePrice = selectedVariant ? selectedVariant.price : product.price;
+                                    const activeCat = selectedVariant ? (selectedVariant.compareAtPrice ?? null) : (product.compareAtPrice ?? null);
+                                    return activeCat && activeCat > activePrice ? (
+                                        <span className="px-4 py-1.5 bg-[#dc2626] text-white text-[0.65rem] font-bold tracking-[0.2em] rounded-full uppercase shadow-md text-center">
+                                            -{Math.round(((activeCat - activePrice) / activeCat) * 100)}%
+                                        </span>
+                                    ) : null;
+                                })()}
                                 {product.isBestseller && <span className="px-4 py-1.5 bg-[#C9A84C] text-[#0F2E22] text-[0.65rem] font-bold tracking-[0.2em] rounded-full uppercase text-center">BEST-SELLER</span>}
                                 {product.isNew && <span className="px-4 py-1.5 bg-[#0F2E22] text-white text-[0.65rem] font-bold tracking-[0.2em] rounded-full uppercase text-center">NEW</span>}
                             </div>
@@ -196,17 +201,28 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
                         {/* Price */}
                         <div className="flex flex-col mb-8 text-center lg:text-left">
-                            <div className="flex items-baseline justify-center lg:justify-start gap-4">
-                                <span className="text-4xl font-normal text-[#0F2E22] tracking-wide">{formatPrice(selectedVariant ? selectedVariant.price : product.price)}</span>
-                                {product.compareAtPrice && product.compareAtPrice > product.price && (
-                                    <span className="text-xl text-[#2D2D2D]/40 line-through font-light">{formatPrice(product.compareAtPrice)}</span>
-                                )}
-                            </div>
-                            {product.compareAtPrice && product.compareAtPrice > product.price && (
-                                <span className="text-sm font-medium text-[#dc2626] mt-2 tracking-wide">
-                                    {locale === 'fr' ? 'Vous économisez' : 'You save'} {formatPrice(product.compareAtPrice - product.price)}
-                                </span>
-                            )}
+                            {(() => {
+                                const activePrice = selectedVariant ? selectedVariant.price : product.price;
+                                const activeCompareAt = selectedVariant
+                                    ? (selectedVariant.compareAtPrice ?? null)
+                                    : (product.compareAtPrice ?? null);
+                                const showSavings = activeCompareAt && activeCompareAt > activePrice;
+                                return (
+                                    <>
+                                        <div className="flex items-baseline justify-center lg:justify-start gap-4">
+                                            <span className="text-4xl font-normal text-[#0F2E22] tracking-wide">{formatPrice(activePrice)}</span>
+                                            {showSavings && (
+                                                <span className="text-xl text-[#2D2D2D]/40 line-through font-light">{formatPrice(activeCompareAt!)}</span>
+                                            )}
+                                        </div>
+                                        {showSavings && (
+                                            <span className="text-sm font-medium text-[#dc2626] mt-2 tracking-wide">
+                                                {locale === 'fr' ? 'Vous économisez' : 'You save'} {formatPrice(activeCompareAt! - activePrice)}
+                                            </span>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         {/* Short Description */}
