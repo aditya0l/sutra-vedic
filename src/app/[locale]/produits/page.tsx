@@ -7,8 +7,8 @@ import { Link } from '@/i18n/navigation';
 import { useCart } from '@/lib/cart-context';
 import { productsApi } from '@/lib/api';
 import { getLocalizedValue, formatPrice } from '@/lib/utils';
-import { Star, ShoppingBag, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Star, ShoppingBag, ArrowRight, X, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import AnimateIn from '@/components/ui/AnimateIn';
 import { Product } from '@/types';
 
@@ -35,6 +35,28 @@ function ShopContent() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [sort, setSort] = useState('');
+    const [pickerProduct, setPickerProduct] = useState<Product | null>(null);
+    const [pickerVariantId, setPickerVariantId] = useState<string | null>(null);
+    const [pickerAdded, setPickerAdded] = useState(false);
+
+    function handleQuickAdd(e: React.MouseEvent, product: Product) {
+        e.preventDefault();
+        if (product.variants && product.variants.length > 0) {
+            setPickerProduct(product);
+            setPickerVariantId(product.variants[0].id);
+            setPickerAdded(false);
+        } else {
+            addItem(product);
+        }
+    }
+
+    function confirmPickerAdd() {
+        if (!pickerProduct) return;
+        const variant = pickerProduct.variants?.find(v => v.id === pickerVariantId);
+        addItem(pickerProduct, 1, pickerVariantId || undefined);
+        setPickerAdded(true);
+        setTimeout(() => { setPickerProduct(null); setPickerAdded(false); }, 1200);
+    }
 
     const fetchProducts = useCallback(() => {
         setLoading(true);
@@ -152,10 +174,7 @@ function ShopContent() {
                                         {/* Quick Add Overlay */}
                                         <div className="absolute inset-x-0 bottom-0 p-8 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out-expo">
                                             <button
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    addItem(product);
-                                                }}
+                                                onClick={(e) => handleQuickAdd(e, product)}
                                                 className="px-6 py-5 bg-[#0F2E22] text-white font-bold text-sm rounded-2xl shadow-xl flex items-center justify-center text-center gap-3 hover:bg-[#C9A84C] hover:text-[#0F2E22] transition-colors whitespace-nowrap"
                                             >
                                                 <ShoppingBag className="w-4 h-4 shrink-0" />
@@ -217,6 +236,80 @@ function ShopContent() {
                     </div>
                 )}
             </div>
+
+            {/* Variant Picker Modal */}
+            <AnimatePresence>
+                {pickerProduct && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/40 z-50 backdrop-blur-sm"
+                            onClick={() => setPickerProduct(null)}
+                        />
+                        {/* Drawer */}
+                        <motion.div
+                            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+                            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-w-lg mx-auto p-6"
+                        >
+                            <div className="flex items-start justify-between mb-5">
+                                <div>
+                                    <p className="text-xs font-medium tracking-widest uppercase text-[#C9A84C] mb-1">
+                                        {locale === 'fr' ? 'Choisir une option' : 'Choose an option'}
+                                    </p>
+                                    <h3 className="font-serif text-xl text-[#0F2E22] leading-tight">
+                                        {getLocalizedValue(pickerProduct.name, locale)}
+                                    </h3>
+                                </div>
+                                <button onClick={() => setPickerProduct(null)} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                                    <X className="w-5 h-5 text-gray-400" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 mb-6">
+                                {pickerProduct.variants?.map(variant => {
+                                    const isSelected = pickerVariantId === variant.id;
+                                    const vName = getLocalizedValue(variant.name, locale);
+                                    return (
+                                        <button
+                                            key={variant.id}
+                                            onClick={() => setPickerVariantId(variant.id)}
+                                            className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all ${isSelected
+                                                    ? 'border-[#0F2E22] bg-[#0F2E22]/5'
+                                                    : 'border-cream-dark/20 hover:border-[#C9A84C]/50 bg-white'
+                                                }`}
+                                        >
+                                            <span className="font-serif text-base text-[#0F2E22] mb-1">{vName}</span>
+                                            <div className="flex items-center gap-2">
+                                                {variant.compareAtPrice && variant.compareAtPrice > variant.price && (
+                                                    <span className="text-xs text-gray-400 line-through">{formatPrice(variant.compareAtPrice)}</span>
+                                                )}
+                                                <span className="font-medium text-[#0F2E22]">{formatPrice(variant.price)}</span>
+                                            </div>
+                                            {variant.compareAtPrice && variant.compareAtPrice > variant.price && (
+                                                <span className="mt-1 text-[10px] font-bold text-red-500 uppercase tracking-wide">
+                                                    -{Math.round((1 - variant.price / variant.compareAtPrice) * 100)}%
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                onClick={confirmPickerAdd}
+                                className="w-full py-4 bg-[#0F2E22] text-white font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-[#C9A84C] hover:text-[#0F2E22] transition-colors text-sm tracking-wide"
+                            >
+                                {pickerAdded
+                                    ? <><Check className="w-5 h-5" />{locale === 'fr' ? 'Ajouté !' : 'Added!'}</>
+                                    : <><ShoppingBag className="w-5 h-5" />{locale === 'fr' ? 'Ajouter au panier' : 'Add to Cart'}</>
+                                }
+                            </button>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
             {/* Footer CTA */}
             <div className="py-32 bg-[#0F2E22] text-white">

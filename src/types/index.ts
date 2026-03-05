@@ -26,6 +26,7 @@ export interface Product {
         id: string;
         name: { fr: string; en: string };
         price: number;
+        compareAtPrice?: number;
         sku: string;
         stock: number;
     }[];

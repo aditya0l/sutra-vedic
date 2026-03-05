@@ -37,6 +37,13 @@ export default function ProductsTab({ token }: { token: string }) {
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
+    // Variants: each has { id, nameFr, nameEn, price, compareAtPrice, stock }
+    const [variants, setVariants] = useState<{ id: string; nameFr: string; nameEn: string; price: string; compareAtPrice: string; stock: string }[]>([]);
+
+    function blankVariant() {
+        return { id: Date.now().toString(), nameFr: '', nameEn: '', price: '', compareAtPrice: '', stock: '' };
+    }
+
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
@@ -60,7 +67,7 @@ export default function ProductsTab({ token }: { token: string }) {
         return { nameFr: '', nameEn: '', shortFr: '', shortEn: '', price: '', compareAtPrice: '', discountPct: '', sku: '', categoryId: categories[0]?.id || '', imageUrl: '', stock: '', isNew: false, isBestseller: false, isActive: true };
     }
 
-    function openCreate() { setEditing(null); setForm(blankForm()); setMsg(null); setShowForm(true); }
+    function openCreate() { setEditing(null); setForm(blankForm()); setVariants([]); setMsg(null); setShowForm(true); }
 
     function openEdit(p: any) {
         setEditing(p);
@@ -76,6 +83,14 @@ export default function ProductsTab({ token }: { token: string }) {
             stock: String(p.stock ?? 0), isNew: p.isNew ?? false, isBestseller: p.isBestseller ?? false, isActive: p.isActive ?? true,
         });
         setMsg(null);
+        setVariants((p.variants || []).map((v: any) => ({
+            id: v.id || Date.now().toString(),
+            nameFr: v.name?.fr || v.nameFr || '',
+            nameEn: v.name?.en || v.nameEn || '',
+            price: String(v.price),
+            compareAtPrice: String(v.compareAtPrice || ''),
+            stock: String(v.stock ?? 0),
+        })));
         setShowForm(true);
     }
 
@@ -93,6 +108,13 @@ export default function ProductsTab({ token }: { token: string }) {
             isNew: form.isNew ?? false,
             isBestseller: form.isBestseller ?? false,
             isActive: form.isActive ?? true,
+            variants: variants.map(v => ({
+                id: v.id,
+                name: { fr: v.nameFr, en: v.nameEn },
+                price: parseFloat(v.price) || 0,
+                compareAtPrice: v.compareAtPrice ? parseFloat(v.compareAtPrice) : null,
+                stock: parseInt(v.stock || '0'),
+            })),
             ...(!editing ? { sku: form.sku, slug: form.nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || form.sku } : {}),
             updatedAt: new Date().toISOString(),
         };
@@ -286,6 +308,61 @@ export default function ProductsTab({ token }: { token: string }) {
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    {/* ── Variants ─────────────────────────────────────── */}
+                    <div style={{ gridColumn: '1 / -1', marginTop: 24, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <div>
+                                <Label>Variants (sizes, formats…)</Label>
+                                <p style={{ fontSize: 12, color: '#94a3b8', margin: '2px 0 0' }}>Each variant can have its own price, original price, and stock level.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setVariants(v => [...v, blankVariant()])}
+                                style={{ padding: '7px 14px', background: '#0F2E22', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                                + Add Variant
+                            </button>
+                        </div>
+                        {variants.length === 0 && (
+                            <p style={{ fontSize: 12, color: '#cbd5e1', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>No variants — product has a single price above.</p>
+                        )}
+                        {variants.map((v, idx) => (
+                            <div key={v.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr auto', gap: 10, marginBottom: 10, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', alignItems: 'end' }}>
+                                <div>
+                                    <Label>Name (FR)</Label>
+                                    <input style={inp({ fontSize: 12 })} placeholder="ex: 10 ml" value={v.nameFr}
+                                        onChange={e => setVariants(vs => vs.map((x, i) => i === idx ? { ...x, nameFr: e.target.value } : x))} />
+                                </div>
+                                <div>
+                                    <Label>Name (EN)</Label>
+                                    <input style={inp({ fontSize: 12 })} placeholder="e.g. 10 ml" value={v.nameEn}
+                                        onChange={e => setVariants(vs => vs.map((x, i) => i === idx ? { ...x, nameEn: e.target.value } : x))} />
+                                </div>
+                                <div>
+                                    <Label>Price (€)</Label>
+                                    <input style={inp({ fontSize: 12 })} type="number" step="0.01" placeholder="110.00" value={v.price}
+                                        onChange={e => setVariants(vs => vs.map((x, i) => i === idx ? { ...x, price: e.target.value } : x))} />
+                                </div>
+                                <div>
+                                    <Label>Original Price (€)</Label>
+                                    <input style={inp({ fontSize: 12 })} type="number" step="0.01" placeholder="250.00" value={v.compareAtPrice}
+                                        onChange={e => setVariants(vs => vs.map((x, i) => i === idx ? { ...x, compareAtPrice: e.target.value } : x))} />
+                                </div>
+                                <div>
+                                    <Label>Stock</Label>
+                                    <input style={inp({ fontSize: 12 })} type="number" placeholder="0" value={v.stock}
+                                        onChange={e => setVariants(vs => vs.map((x, i) => i === idx ? { ...x, stock: e.target.value } : x))} />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setVariants(vs => vs.filter((_, i) => i !== idx))}
+                                    style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 10px', cursor: 'pointer', color: '#dc2626', fontSize: 16, lineHeight: 1 }}
+                                    title="Remove variant"
+                                >×</button>
+                            </div>
+                        ))}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
