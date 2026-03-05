@@ -426,6 +426,15 @@ export default function AccountPage() {
                                                             {order.status}
                                                         </span>
                                                         <p className="font-medium text-xl tracking-wide text-forest-dark">{formatPrice((order as any).total || (order as any).totalAmount || 0)}</p>
+                                                        {order.status === 'delivered' && (
+                                                            <a
+                                                                href={`/${locale}/legal/politique-retour`}
+                                                                className="mt-1 flex items-center gap-1.5 px-4 py-2 text-[0.75rem] font-medium tracking-wide text-red-600 border border-red-200 bg-red-50 rounded-full hover:bg-red-100 transition-colors uppercase"
+                                                            >
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.65" /></svg>
+                                                                {locale === 'fr' ? 'Retourner' : 'Return'}
+                                                            </a>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

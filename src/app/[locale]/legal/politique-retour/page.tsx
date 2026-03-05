@@ -113,8 +113,8 @@ export default function ReturnPolicyPage() {
         },
         {
             icon: CreditCard,
-            number: '5',
-            title: isFr ? 'Processus de remboursement' : '5. Refund Process',
+            number: '4',
+            title: isFr ? 'Processus de remboursement' : '4. Refund Process',
             content: (
                 <div className="space-y-3 text-[#2D2D2D]/70 leading-relaxed">
                     <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
