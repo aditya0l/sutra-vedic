@@ -221,10 +221,31 @@ export const ordersApi = {
             if (productDoc.exists()) {
                 const productData = productDoc.data() as Product;
                 let price = productData.price;
-                if (item.variantId && productData.variants) {
-                    const variant = productData.variants.find(v => v.id === item.variantId);
-                    if (variant) price = variant.price;
+                let variantName = undefined;
+
+                // Track stock updates for this product document
+                let newTotalStock = productData.stock || 0;
+                let updatedVariants = productData.variants ? [...productData.variants] : undefined;
+
+                if (item.variantId && updatedVariants) {
+                    const variantIndex = updatedVariants.findIndex(v => v.id === item.variantId);
+                    if (variantIndex !== -1) {
+                        const variant = updatedVariants[variantIndex];
+                        price = variant.price;
+                        variantName = typeof variant.name === 'object' ? (variant.name.en || variant.name.fr) : variant.name;
+
+                        // Decrement variant stock
+                        const currentVariantStock = variant.stock || 0;
+                        updatedVariants[variantIndex] = {
+                            ...variant,
+                            stock: Math.max(0, currentVariantStock - item.quantity)
+                        };
+                    }
+                } else {
+                    // Decrement base product stock if no variant
+                    newTotalStock = Math.max(0, newTotalStock - item.quantity);
                 }
+
                 totalAmount += (price * item.quantity);
 
                 enrichedItems.push({
@@ -234,9 +255,23 @@ export const ordersApi = {
                     unitPrice: price,
                     productSnapshot: {
                         name: productData.name,
-                        category: productData.category
+                        category: productData.category,
+                        variantName: variantName
                     }
                 });
+
+                // Apply stock updates to Firestore
+                try {
+                    const updatePayload: any = {};
+                    if (updatedVariants) {
+                        updatePayload.variants = updatedVariants;
+                    } else {
+                        updatePayload.stock = newTotalStock;
+                    }
+                    await updateDoc(doc(db, 'products', item.productId), updatePayload);
+                } catch (err) {
+                    console.error(`Failed to update stock for product ${item.productId}:`, err);
+                }
             }
         }
 

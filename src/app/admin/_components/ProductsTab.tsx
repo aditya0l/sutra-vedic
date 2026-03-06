@@ -420,6 +420,11 @@ export default function ProductsTab({ token }: { token: string }) {
                                     if (!cat) return '—';
                                     return typeof cat.name === 'object' ? (cat.name.en || cat.name.fr) : cat.name;
                                 })();
+
+                                const displayStock = p.variants && p.variants.length > 0
+                                    ? p.variants.reduce((sum: number, v: any) => sum + (parseInt(v.stock) || 0), 0)
+                                    : (parseInt(p.stock) || 0);
+
                                 return (
                                     <tr key={p.id} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.1s' }}>
                                         <td style={{ padding: '13px 16px', fontSize: 13.5, fontWeight: 600, color: '#0f172a' }}>{name}</td>
@@ -433,8 +438,8 @@ export default function ProductsTab({ token }: { token: string }) {
                                                 <span style={{ textDecoration: 'line-through' }}>€{Number(p.compareAtPrice).toFixed(2)}</span>
                                             ) : '—'}
                                         </td>
-                                        <td style={{ padding: '13px 16px', fontSize: 13, fontWeight: 700, color: p.stock > 5 ? '#059669' : p.stock > 0 ? '#d97706' : '#dc2626' }}>
-                                            {p.stock}
+                                        <td style={{ padding: '13px 16px', fontSize: 13, fontWeight: 700, color: displayStock > 5 ? '#059669' : displayStock > 0 ? '#d97706' : '#dc2626' }}>
+                                            {displayStock}
                                         </td>
                                         <td style={{ padding: '13px 16px' }}>
                                             <span style={{
