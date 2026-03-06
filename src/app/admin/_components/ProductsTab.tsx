@@ -270,7 +270,11 @@ export default function ProductsTab({ token }: { token: string }) {
                         </div>
                         <div>
                             <Label>Stock Quantity</Label>
-                            <input style={inp()} type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} />
+                            {variants.length > 0 ? (
+                                <input style={{ ...inp(), background: '#f1f5f9', color: '#64748b', fontStyle: 'italic' }} type="text" value="Calculated from variants" disabled />
+                            ) : (
+                                <input style={inp()} type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} />
+                            )}
                         </div>
                         {!editing && (
                             <div>
