@@ -104,7 +104,26 @@ export default function Footer() {
 
             {/* Bottom Bar */}
             <div className="border-t border-white/[0.06]">
-                <div className="container-premium py-6 flex flex-col items-center gap-6">
+                <div className="container-premium py-8 flex flex-col items-center gap-8">
+                    {/* Certification Logos - 1 Inch Horizontal Layout */}
+                    <div className="bg-white rounded-md py-2 px-4 flex items-center justify-center gap-x-6">
+                        <img
+                            src="/images/certifications/ansm.png"
+                            alt="ANSM"
+                            className="w-24 h-auto object-contain"
+                        />
+                        <img
+                            src="/images/certifications/ars.png"
+                            alt="ARS"
+                            className="w-24 h-auto object-contain"
+                        />
+                        <img
+                            src="/images/certifications/republique-francaise.png"
+                            alt="République Française"
+                            className="w-24 h-auto object-contain"
+                        />
+                    </div>
+
                     <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
                         {legalLinks.map(link => (
                             <Link key={link.href} href={link.href} className="text-[0.7rem] text-white/25 hover:text-[#C9A84C] transition-colors">
