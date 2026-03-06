@@ -331,7 +331,7 @@ export default function ProductsTab({ token }: { token: string }) {
                             <p style={{ fontSize: 12, color: '#cbd5e1', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>No variants — product has a single price above.</p>
                         )}
                         {variants.map((v, idx) => (
-                            <div key={v.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto auto', gap: 10, marginBottom: 10, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', alignItems: 'end' }}>
+                            <div key={v.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.8fr auto 0.8fr auto', gap: 10, marginBottom: 10, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', alignItems: 'end' }}>
                                 <div>
                                     <Label>Name (FR)</Label>
                                     <input style={inp({ fontSize: 12 })} placeholder="ex: 10 ml" value={v.nameFr}
@@ -362,6 +362,11 @@ export default function ProductsTab({ token }: { token: string }) {
                                             return sale > 0 ? `${sale.toFixed(2)} €` : '—';
                                         })()}
                                     </div>
+                                </div>
+                                <div>
+                                    <Label>Stock</Label>
+                                    <input style={inp({ fontSize: 12 })} type="number" placeholder="0" value={v.stock}
+                                        onChange={e => setVariants(vs => vs.map((x, i) => i === idx ? { ...x, stock: e.target.value } : x))} />
                                 </div>
                                 <button
                                     type="button"
