@@ -173,13 +173,22 @@ function ShopContent() {
 
                                         {/* Quick Add Overlay */}
                                         <div className="absolute inset-x-0 bottom-0 p-8 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out-expo">
-                                            <button
-                                                onClick={(e) => handleQuickAdd(e, product)}
-                                                className="px-6 py-5 bg-[#0F2E22] text-white font-bold text-sm rounded-2xl shadow-xl flex items-center justify-center text-center gap-3 hover:bg-[#C9A84C] hover:text-[#0F2E22] transition-colors whitespace-nowrap"
-                                            >
-                                                <ShoppingBag className="w-4 h-4 shrink-0" />
-                                                <span className="truncate">{locale === 'fr' ? 'Ajouter au Panier' : 'Add to Cart'}</span>
-                                            </button>
+                                            {product.stock <= 0 ? (
+                                                <button
+                                                    disabled
+                                                    className="w-full px-6 py-5 bg-red-50 text-red-800/80 font-bold text-sm rounded-2xl shadow-xl flex items-center justify-center text-center gap-3 cursor-not-allowed border border-red-200"
+                                                >
+                                                    <span className="truncate">{locale === 'fr' ? 'Rupture de Stock' : 'Out of Stock'}</span>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => handleQuickAdd(e, product)}
+                                                    className="w-full px-6 py-5 bg-[#0F2E22] text-white font-bold text-sm rounded-2xl shadow-xl flex items-center justify-center text-center gap-3 hover:bg-[#C9A84C] hover:text-[#0F2E22] transition-colors whitespace-nowrap"
+                                                >
+                                                    <ShoppingBag className="w-4 h-4 shrink-0" />
+                                                    <span className="truncate">{locale === 'fr' ? 'Ajouter au Panier' : 'Add to Cart'}</span>
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -232,7 +241,7 @@ function ShopContent() {
                                                                 {formatPrice(displayCompareAt!)}
                                                             </span>
                                                         )}
-                                                        <span className="text-lg font-medium tracking-wide text-[#0F2E22]">
+                                                        <span className={`text-lg font-medium tracking-wide ${product.stock <= 0 ? 'text-gray-400 line-through' : 'text-[#0F2E22]'}`}>
                                                             {cheapestVariant && product.variants!.length > 1
                                                                 ? `${locale === 'fr' ? 'À partir de ' : 'From '}${formatPrice(displayPrice)}`
                                                                 : formatPrice(displayPrice)}
@@ -286,13 +295,18 @@ function ShopContent() {
                                 {pickerProduct.variants?.map(variant => {
                                     const isSelected = pickerVariantId === variant.id;
                                     const vName = getLocalizedValue(variant.name, locale);
+                                    const isOutOfStock = variant.stock <= 0;
+
                                     return (
                                         <button
                                             key={variant.id}
-                                            onClick={() => setPickerVariantId(variant.id)}
-                                            className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all ${isSelected
-                                                ? 'border-[#0F2E22] bg-[#0F2E22]/5'
-                                                : 'border-cream-dark/20 hover:border-[#C9A84C]/50 bg-white'
+                                            onClick={() => !isOutOfStock && setPickerVariantId(variant.id)}
+                                            disabled={isOutOfStock}
+                                            className={`relative flex flex-col items-center p-4 rounded-2xl border-2 transition-all ${isOutOfStock
+                                                ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                                                : isSelected
+                                                    ? 'border-[#0F2E22] bg-[#0F2E22]/5'
+                                                    : 'border-cream-dark/20 hover:border-[#C9A84C]/50 bg-white'
                                                 }`}
                                         >
                                             <span className="font-serif text-base text-[#0F2E22] mb-1">{vName}</span>
@@ -302,9 +316,14 @@ function ShopContent() {
                                                 )}
                                                 <span className="font-medium text-[#0F2E22]">{formatPrice(variant.price)}</span>
                                             </div>
-                                            {variant.compareAtPrice && variant.compareAtPrice > variant.price && (
+                                            {variant.compareAtPrice && variant.compareAtPrice > variant.price && !isOutOfStock && (
                                                 <span className="mt-1 text-[10px] font-bold text-red-500 uppercase tracking-wide">
                                                     -{Math.round((1 - variant.price / variant.compareAtPrice) * 100)}%
+                                                </span>
+                                            )}
+                                            {isOutOfStock && (
+                                                <span className="mt-2 text-[10px] font-bold text-red-600 uppercase tracking-wide px-2 py-0.5 bg-red-100 rounded">
+                                                    {locale === 'fr' ? 'Rupture' : 'Out'}
                                                 </span>
                                             )}
                                         </button>
@@ -314,7 +333,8 @@ function ShopContent() {
 
                             <button
                                 onClick={confirmPickerAdd}
-                                className="w-full py-4 bg-[#0F2E22] text-white font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-[#C9A84C] hover:text-[#0F2E22] transition-colors text-sm tracking-wide"
+                                disabled={!pickerProduct.variants || (pickerProduct.variants.find(v => v.id === pickerVariantId)?.stock ?? 0) <= 0}
+                                className="w-full py-4 bg-[#0F2E22] text-white font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-[#C9A84C] hover:text-[#0F2E22] transition-colors text-sm tracking-wide disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
                             >
                                 {pickerAdded
                                     ? <><Check className="w-5 h-5" />{locale === 'fr' ? 'Ajouté !' : 'Added!'}</>

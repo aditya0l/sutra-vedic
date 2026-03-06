@@ -237,51 +237,80 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                                     {locale === 'fr' ? 'Choisir la taille' : 'Choose Size'}
                                 </p>
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-3">
-                                    {product.variants.map((variant) => (
-                                        <button
-                                            key={variant.id}
-                                            onClick={() => setSelectedVariant(variant)}
-                                            className={`px-8 py-3.5 rounded-xl border-2 transition-all font-bold text-[0.85rem] tracking-wider uppercase ${selectedVariant?.id === variant.id
-                                                ? 'border-[#C9A84C] bg-[#C9A84C]/5 text-[#0F2E22]'
-                                                : 'border-cream-dark/20 text-[#2D2D2D]/60 hover:border-[#C9A84C]/40 hover:text-[#0F2E22]'
-                                                }`}
-                                        >
-                                            {getLocalizedValue(variant.name, locale)}
-                                        </button>
-                                    ))}
+                                    {product.variants.map((variant) => {
+                                        const isSelected = selectedVariant?.id === variant.id;
+                                        const isOutOfStock = variant.stock <= 0;
+
+                                        return (
+                                            <button
+                                                key={variant.id}
+                                                onClick={() => !isOutOfStock && setSelectedVariant(variant)}
+                                                disabled={isOutOfStock}
+                                                className={`relative px-8 py-3.5 rounded-xl border-2 transition-all font-bold text-[0.85rem] tracking-wider uppercase ${isOutOfStock
+                                                    ? 'border-gray-200 bg-gray-50 text-gray-400 opacity-60 cursor-not-allowed line-through decoration-2'
+                                                    : isSelected
+                                                        ? 'border-[#C9A84C] bg-[#C9A84C]/5 text-[#0F2E22]'
+                                                        : 'border-cream-dark/20 text-[#2D2D2D]/60 hover:border-[#C9A84C]/40 hover:text-[#0F2E22]'
+                                                    }`}
+                                            >
+                                                {getLocalizedValue(variant.name, locale)}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
 
                         {/* Stock Status */}
                         <div className="flex items-center gap-2 mb-6">
-                            <div className={`w-2.5 h-2.5 rounded-full ${product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-orange-500' : 'bg-red-500'}`} />
-                            <span className={`text-sm font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-600' : 'text-red-600'}`}>
-                                {product.stock > 10 ? t('inStock') : product.stock > 0 ? `${t('lowStock')} (${product.stock})` : t('outOfStock')}
-                            </span>
+                            {(() => {
+                                const activeStock = selectedVariant ? selectedVariant.stock : product.stock;
+                                return (
+                                    <>
+                                        <div className={`w-2.5 h-2.5 rounded-full ${activeStock > 10 ? 'bg-green-500' : activeStock > 0 ? 'bg-orange-500' : 'bg-red-500'}`} />
+                                        <span className={`text-sm font-medium ${activeStock > 10 ? 'text-green-600' : activeStock > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                                            {activeStock > 10 ? t('inStock') : activeStock > 0 ? `${t('lowStock')} (${activeStock})` : t('outOfStock')}
+                                        </span>
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         {/* Quantity & Add to Cart */}
                         <div className="flex flex-col sm:flex-row gap-4 mb-6">
                             <div className="flex items-center border border-cream-dark/20 rounded-xl overflow-hidden bg-white">
-                                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors">
-                                    <Minus className="w-4 h-4" />
-                                </button>
-                                <span className="w-12 h-12 flex items-center justify-center font-semibold text-lg border-x border-cream-dark/20">{quantity}</span>
-                                <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors">
-                                    <Plus className="w-4 h-4" />
-                                </button>
+                                {(() => {
+                                    const activeStock = selectedVariant ? selectedVariant.stock : product.stock;
+                                    return (
+                                        <>
+                                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors disabled:opacity-50" disabled={activeStock <= 0}>
+                                                <Minus className="w-4 h-4" />
+                                            </button>
+                                            <span className="w-12 h-12 flex items-center justify-center font-semibold text-lg border-x border-cream-dark/20">{activeStock <= 0 ? 0 : quantity}</span>
+                                            <button onClick={() => setQuantity(q => Math.min(activeStock, q + 1))} className="w-12 h-12 flex items-center justify-center hover:bg-cream transition-colors disabled:opacity-50" disabled={activeStock <= 0}>
+                                                <Plus className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    );
+                                })()}
                             </div>
 
                             <button
                                 onClick={handleAddToCart}
-                                disabled={product.stock <= 0}
+                                disabled={(selectedVariant ? selectedVariant.stock : product.stock) <= 0}
                                 className={`px-[2.5rem] sm:px-[3rem] py-5 font-bold rounded-xl transition-all duration-300 flex items-center justify-center text-center gap-2 text-[0.95rem] tracking-wide ${addedToCart
                                     ? 'bg-green-600 text-white'
-                                    : 'bg-forest hover:bg-forest-light text-white hover:shadow-xl'
-                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    : (selectedVariant ? selectedVariant.stock : product.stock) <= 0
+                                        ? 'bg-red-50 text-red-800/80 border border-red-200'
+                                        : 'bg-forest hover:bg-forest-light text-white hover:shadow-xl'
+                                    } disabled:cursor-not-allowed`}
                             >
-                                {addedToCart ? (<><Check className="w-5 h-5 shrink-0" /><span>{locale === 'fr' ? 'Ajouté !' : 'Added!'}</span></>) : (<><ShoppingBag className="w-5 h-5 shrink-0" /><span>{t('addToCart')}</span></>)}
+                                {addedToCart
+                                    ? (<><Check className="w-5 h-5 shrink-0" /><span>{locale === 'fr' ? 'Ajouté !' : 'Added!'}</span></>)
+                                    : (selectedVariant ? selectedVariant.stock : product.stock) <= 0
+                                        ? (<span>{locale === 'fr' ? 'Rupture de Stock' : 'Out of Stock'}</span>)
+                                        : (<><ShoppingBag className="w-5 h-5 shrink-0" /><span>{t('addToCart')}</span></>)
+                                }
                             </button>
                             <button
                                 onClick={() => product && toggleWishlist(product.id)}
@@ -298,10 +327,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         {/* Buy Now */}
                         <button
                             onClick={handleBuyNow}
-                            disabled={product.stock <= 0}
-                            className="px-[2.5rem] sm:px-[3.5rem] py-5 bg-gold hover:bg-gold-light text-forest-dark font-bold rounded-xl transition-all duration-300 inline-flex items-center justify-center text-center gap-2 text-[0.95rem] tracking-wide mb-8 hover:shadow-xl w-[calc(100%-2rem)] sm:w-auto mx-auto lg:mx-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={(selectedVariant ? selectedVariant.stock : product.stock) <= 0}
+                            className={`px-[2.5rem] sm:px-[3.5rem] py-5 font-bold rounded-xl transition-all duration-300 inline-flex items-center justify-center text-center gap-2 text-[0.95rem] tracking-wide mb-8 w-[calc(100%-2rem)] sm:w-auto mx-auto lg:mx-0 disabled:cursor-not-allowed ${(selectedVariant ? selectedVariant.stock : product.stock) <= 0 ? 'bg-gray-100 text-gray-400 border border-gray-200' : 'bg-gold hover:bg-gold-light text-forest-dark hover:shadow-xl'}`}
                         >
-                            <span>{t('buyNow')}</span>
+                            <span>{(selectedVariant ? selectedVariant.stock : product.stock) <= 0 ? (locale === 'fr' ? 'Interrompu' : 'Unavailable') : t('buyNow')}</span>
                         </button>
 
                         {/* Trust Badges */}
