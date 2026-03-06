@@ -105,6 +105,24 @@ export default function ProductsTab({ token }: { token: string }) {
         const salePrice = pct > 0 ? parseFloat((original * (1 - pct / 100)).toFixed(2)) : original;
         const compareAt = pct > 0 ? original : null;
 
+        const parsedVariants = variants.map(v => {
+            const vOrig = parseFloat(v.originalPrice) || 0;
+            const vPct = parseFloat(v.discountPct) || 0;
+            const vSale = vPct > 0 ? parseFloat((vOrig * (1 - vPct / 100)).toFixed(2)) : vOrig;
+            return {
+                id: v.id,
+                name: { fr: v.nameFr, en: v.nameEn },
+                price: vSale,
+                compareAtPrice: vPct > 0 ? vOrig : null,
+                stock: parseInt(v.stock?.toString() || '0', 10) || 0,
+            };
+        });
+
+        // Calculate total sum of variant stock to keep top-level sync
+        const totalVariantStock = parsedVariants.length > 0
+            ? parsedVariants.reduce((sum, v) => sum + v.stock, 0)
+            : parseInt(form.stock?.toString() || '0', 10) || 0;
+
         const payload = {
             name: { fr: form.nameFr, en: form.nameEn },
             shortDescription: { fr: form.shortFr, en: form.shortEn },
@@ -112,23 +130,12 @@ export default function ProductsTab({ token }: { token: string }) {
             price: salePrice,
             compareAtPrice: compareAt,
             categoryId: form.categoryId,
-            stock: parseInt(form.stock || '0'),
+            stock: totalVariantStock,
             images: form.imageUrl ? [form.imageUrl] : [],
             isNew: form.isNew ?? false,
             isBestseller: form.isBestseller ?? false,
             isActive: form.isActive ?? true,
-            variants: variants.map(v => {
-                const vOrig = parseFloat(v.originalPrice) || 0;
-                const vPct = parseFloat(v.discountPct) || 0;
-                const vSale = vPct > 0 ? parseFloat((vOrig * (1 - vPct / 100)).toFixed(2)) : vOrig;
-                return {
-                    id: v.id,
-                    name: { fr: v.nameFr, en: v.nameEn },
-                    price: vSale,
-                    compareAtPrice: vPct > 0 ? vOrig : null,
-                    stock: parseInt(v.stock || '0'),
-                };
-            }),
+            variants: parsedVariants,
             ...(!editing ? { sku: form.sku, slug: form.nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || form.sku } : {}),
             updatedAt: new Date().toISOString(),
         };
